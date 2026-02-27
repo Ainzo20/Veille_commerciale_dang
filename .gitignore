@@ -1,0 +1,36 @@
+# --- Environnement Virtuel ---
+# On n'envoie JAMAIS le venv, l'utilisateur le recréera avec requirements.txt
+venv/
+/venv
+.venv/
+env/
+
+
+# --- Base de données (TRÈS IMPORTANT) ---
+# On n'envoie pas tes tests locaux ni tes doublons de "Riz"
+*.db
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Cache Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+__pycache__
+
+# --- Configuration et Secrets ---
+# Si tu as des mots de passe ou clés API
+.env
+.flaskenv
+
+# --- OS / IDE ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
