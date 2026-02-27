@@ -31,7 +31,7 @@ class CategorieCreate(OrmBase):
     icone:       Optional[str] = Field(None, max_length=10)
 
 class CategorieUpdate(OrmBase):
-    nom:         Optional[str] = Field(None, min_length=2, max_length=80)
+    nom:         Optional[str]  = Field(None, min_length=2, max_length=80)
     description: Optional[str] = None
     icone:       Optional[str] = None
     actif:       Optional[bool] = None
@@ -61,9 +61,17 @@ class ActiviteSummary(OrmBase):
     id: int; nom: str; categorie: CategorieSummary; actif: bool
 
 class ActiviteOut(OrmBase):
-    id: int; categorie_id: int; categorie: CategorieSummary
-    nom: str; mots_cles: Optional[str]
-    date_premiere_observation: date; actif: bool; created_at: datetime
+    id:                        int
+    nom:                       str
+    categorie:                 CategorieSummary
+    mots_cles:                 Optional[str]
+    date_premiere_observation: date
+    # CA cumulé total de l'activité : SUM des recette_journaliere des sessions
+    # ouvertes liées à cette activité — toutes dates, tous commerçants confondus.
+    # Calculé par Activite.ca_total (hybrid_property), jamais stocké en colonne.
+    ca_total:  float
+    actif:     bool
+    created_at: datetime
 
 
 # ── ZONE ─────────────────────────────────────────────────────────
@@ -94,14 +102,14 @@ class ZoneOut(OrmBase):
 
 class CommercantCreate(OrmBase):
     activite_id:        int
-    zone_principale_id: Optional[int]           = None
-    telephone:          str                      = Field(..., min_length=8, max_length=20)
-    nom_commercial:     Optional[str]            = Field(None, max_length=150)
-    type_presence:      TypePresenceEnum         = TypePresenceEnum.SEDENTAIRE
-    zones_circuit:      Optional[str]            = None   # JSON list en texte
-    point_depart:       Optional[str]            = Field(None, max_length=200)
+    zone_principale_id: Optional[int]   = None
+    telephone:          str              = Field(..., min_length=8, max_length=20)
+    nom_commercial:     Optional[str]   = Field(None, max_length=150)
+    type_presence:      TypePresenceEnum = TypePresenceEnum.SEDENTAIRE
+    zones_circuit:      Optional[str]   = None   # JSON list en texte
+    point_depart:       Optional[str]   = Field(None, max_length=200)
     date_premiere_obs:  date
-    notes:              Optional[str]            = None
+    notes:              Optional[str]   = None
 
     @model_validator(mode="after")
     def check_ambulant(self) -> "CommercantCreate":
@@ -134,17 +142,17 @@ class CommercantOut(OrmBase):
     notes: Optional[str]; created_at: datetime
 
 
-# ── SESSION JOURNALIERE ───────────────────────────────────────────
+# ── SESSION JOURNALIÈRE ───────────────────────────────────────────
 
 class SessionCreate(OrmBase):
     commercant_id:       int
     activite_id:         int
-    zone_observation_id: Optional[int]       = None
+    zone_observation_id: Optional[int]     = None
     date_session:        date
-    statut:              StatutSessionEnum   = StatutSessionEnum.OUVERT
-    recette_journaliere: Optional[float]     = Field(None, gt=0)
-    score_fiabilite:     float               = Field(0.90, ge=0.0, le=1.0)
-    notes:               Optional[str]       = None
+    statut:              StatutSessionEnum = StatutSessionEnum.OUVERT
+    recette_journaliere: Optional[float]   = Field(None, gt=0)
+    score_fiabilite:     float             = Field(0.90, ge=0.0, le=1.0)
+    notes:               Optional[str]     = None
 
     @model_validator(mode="after")
     def check_recette(self) -> "SessionCreate":
@@ -237,15 +245,32 @@ class ReponseRecherche(OrmBase):
     resultats:    list[ResultatRecherche]
 
 
+# ── CA PAR CATÉGORIE ──────────────────────────────────────────────
+
+class CaCategorieOut(OrmBase):
+    """
+    CA d'une catégorie d'activités sur une période donnée.
+    Calculé par calcul_service.ca_toutes_categories().
+    Exposé dans GET /indicateurs/dashboard et GET /indicateurs/ca-categories.
+    """
+    categorie_id: int
+    nom:          str
+    icone:        Optional[str]
+    ca:           float   # FCFA, 0.0 si aucune session sur la période
+
+
 # ── DASHBOARD ─────────────────────────────────────────────────────
 
 class DashboardOut(OrmBase):
     nb_commercants_actifs:  int
     nb_activites_suivies:   int
     nb_zones:               int
+    # CA global du marché
     ca_semaine_courante:    Optional[float]
     ca_semaine_precedente:  Optional[float]
     tendance_globale:       Optional[TendanceEnum]
+    # CA ventilé par catégorie (semaine courante)
+    ca_par_categorie:       list[CaCategorieOut]
     nb_alertes_non_lues:    int
     top_activites:          list[IndicateurOut]
     alertes_recentes:       list[AlerteOut]

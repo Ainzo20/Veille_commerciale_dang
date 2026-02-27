@@ -1,0 +1,2460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Veille Marché Dang — Backoffice</title>
+
+  <!-- Polices : Playfair Display (titres) + DM Sans (corps) + DM Mono (chiffres) -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Font Awesome 6 — toutes les icônes -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    /* ================================================================
+       VARIABLES — palette dark brun/charbon + or, identique v1
+    ================================================================ */
+    :root {
+      --bg:        #0f0e0c;
+      --bg2:       #181611;
+      --bg3:       #201d17;
+      --surface:   #2a2620;
+      --surface2:  #332f27;
+      --border:    #3a352c;
+      --border2:   #4a4438;
+
+      --gold:      #d4a843;
+      --gold-dim:  #a07c28;
+      --gold-glow: rgba(212,168,67,.14);
+      --gold-glow2:rgba(212,168,67,.08);
+
+      --green:     #5a9e6f;
+      --red:       #c85a4a;
+      --amber:     #e8914a;
+      --blue:      #5a8ec8;
+
+      --text:      #ede8df;
+      --text2:     #b0a590;
+      --text3:     #6e6555;
+
+      --r:         8px;
+      --r-lg:      14px;
+      --shadow:    0 4px 20px rgba(0,0,0,.5);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,.7);
+
+      --sidebar-w: 248px;
+    }
+
+    /* ================================================================
+       RESET & BASE
+    ================================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ================================================================
+       SNACKBAR — notifications système (bas-droite, slide-in)
+    ================================================================ */
+    #snack-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .snack {
+      pointer-events: all;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 300px;
+      max-width: 380px;
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-left-width: 3px;
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 13px 15px;
+      animation: snackIn .28s cubic-bezier(.34,1.56,.64,1) forwards;
+      transition: opacity .25s, transform .25s;
+    }
+
+    /* Couleur de l'accent gauche selon type */
+    .snack.success { border-left-color: var(--green); }
+    .snack.error   { border-left-color: var(--red); }
+    .snack.warn    { border-left-color: var(--amber); }
+    .snack.info    { border-left-color: var(--gold); }
+
+    .snack-icon-wrap {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .snack.success .snack-icon-wrap { background: rgba(90,158,111,.15); color: var(--green); }
+    .snack.error   .snack-icon-wrap { background: rgba(200,90,74,.15);  color: var(--red); }
+    .snack.warn    .snack-icon-wrap { background: rgba(232,145,74,.15); color: var(--amber); }
+    .snack.info    .snack-icon-wrap { background: var(--gold-glow);     color: var(--gold); }
+
+    .snack-body { flex: 1; min-width: 0; }
+    .snack-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      margin-bottom: 2px;
+    }
+    .snack-msg { font-size: 12px; color: var(--text2); line-height: 1.4; }
+
+    .snack-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); font-size: 11px; padding: 2px;
+      flex-shrink: 0; line-height: 1; margin-top: 1px;
+      transition: color .15s;
+    }
+    .snack-close:hover { color: var(--text); }
+
+    .snack.out { opacity: 0; transform: translateX(20px); }
+
+    @keyframes snackIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ================================================================
+       LAYOUT — sidebar fixe + main scrollable
+    ================================================================ */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 200;
+      overflow-y: auto;
+    }
+
+    .sidebar-head {
+      padding: 22px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-logo {
+      width: 34px; height: 34px;
+      background: var(--gold-glow);
+      border: 1px solid rgba(212,168,67,.22);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--gold);
+      margin-bottom: 10px;
+    }
+
+    .brand-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: -.2px;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 10.5px;
+      color: var(--text3);
+      margin-top: 2px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    /* Indicateur statut API dans la sidebar */
+    .api-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 13px;
+      padding: 7px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text3);
+      flex-shrink: 0;
+      transition: background .3s, box-shadow .3s;
+    }
+    .status-dot.ok  { background: var(--green); box-shadow: 0 0 6px rgba(90,158,111,.5); }
+    .status-dot.err { background: var(--red); }
+
+    .api-label {
+      font-size: 11px;
+      color: var(--text3);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── NAVIGATION ── */
+    .nav { padding: 10px 0; flex: 1; }
+
+    .nav-section-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text3);
+      padding: 10px 18px 4px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px 9px 18px;
+      margin: 1px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      border: none;
+      background: none;
+      width: calc(100% - 16px);
+      text-align: left;
+      transition: all .15s;
+      position: relative;
+    }
+
+    .nav-item .nav-icon {
+      width: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text3);
+      flex-shrink: 0;
+      transition: color .15s;
+    }
+
+    .nav-item:hover { background: var(--bg3); color: var(--text); }
+    .nav-item:hover .nav-icon { color: var(--text2); }
+
+    .nav-item.active {
+      background: var(--gold-glow);
+      color: var(--gold);
+      border: 1px solid rgba(212,168,67,.18);
+    }
+    .nav-item.active .nav-icon { color: var(--gold); }
+
+    /* Badge compteur dans la nav */
+    .nav-badge {
+      margin-left: auto;
+      background: var(--red);
+      color: #fff;
+      font-size: 9.5px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+      min-width: 18px;
+      text-align: center;
+    }
+    .nav-badge.zero { background: var(--surface2); color: var(--text3); }
+
+    .sidebar-footer {
+      padding: 14px 18px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text3);
+      line-height: 1.5;
+    }
+
+    /* ── MAIN CONTENT ── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* Topbar fixe en haut du contenu */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 14px; }
+
+    .topbar-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .topbar-sub {
+      font-size: 12px;
+      color: var(--text3);
+      margin-top: 1px;
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    /* Zone de contenu scrollable */
+    .content { padding: 26px 28px; flex: 1; }
+
+    /* ================================================================
+       PAGES — affichage/masquage
+    ================================================================ */
+    .page { display: none; }
+    .page.active {
+      display: block;
+      animation: fadeUp .2s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ================================================================
+       GRILLES
+    ================================================================ */
+    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; }
+    .grid-2r { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; }
+    .grid-2l { display: grid; grid-template-columns: 1fr 2fr; gap: 22px; }
+
+    @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 900px)  { .grid-3 { grid-template-columns: repeat(2,1fr); } }
+    @media (max-width: 720px)  {
+      .grid-4,.grid-3,.grid-2,.grid-2r,.grid-2l { grid-template-columns: 1fr; }
+      .main { margin-left: 0; }
+      .sidebar { transform: translateX(-100%); }
+      .content { padding: 16px; }
+      .topbar { padding: 11px 16px; }
+    }
+
+    /* ================================================================
+       CARTES GÉNÉRIQUES
+    ================================================================ */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+
+    .card-head-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-head-title i { font-size: 12px; color: var(--gold); }
+
+    .card-body { padding: 20px; }
+    .card-body-flush { /* pas de padding — pour les tableaux */ }
+
+    /* ================================================================
+       STAT CARDS (KPI dashboard)
+    ================================================================ */
+    .stat-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .2s, transform .2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+
+    /* Cercle décoratif en bas à droite */
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: -28px; right: -28px;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      opacity: .07;
+    }
+    .stat-card.gold::after  { background: var(--gold); }
+    .stat-card.green::after { background: var(--green); }
+    .stat-card.red::after   { background: var(--red); }
+    .stat-card.amber::after { background: var(--amber); }
+
+    .stat-icon {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      margin-bottom: 13px;
+    }
+    .stat-card.gold  .stat-icon { background: rgba(212,168,67,.14); color: var(--gold);  }
+    .stat-card.green .stat-icon { background: rgba(90,158,111,.14); color: var(--green); }
+    .stat-card.red   .stat-icon { background: rgba(200,90,74,.14);  color: var(--red);   }
+    .stat-card.amber .stat-icon { background: rgba(232,145,74,.14); color: var(--amber); }
+
+    .stat-label {
+      font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--text3);
+    }
+    .stat-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px; font-weight: 700;
+      line-height: 1.1; margin-top: 3px;
+    }
+    .stat-card.gold  .stat-value { color: var(--gold);  }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.red   .stat-value { color: var(--red);   }
+    .stat-card.amber .stat-value { color: var(--amber); }
+    .stat-sub { font-size: 11.5px; color: var(--text3); margin-top: 3px; }
+
+    /* ================================================================
+       TABLEAUX
+    ================================================================ */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+    .tbl th {
+      text-align: left;
+      padding: 9px 14px;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .6px;
+      color: var(--text3);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+      white-space: nowrap;
+    }
+
+    .tbl td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--text2);
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:hover td     { background: var(--surface); }
+
+    .tbl .mono { font-family: 'DM Mono', monospace; }
+    .tbl .gold  { color: var(--gold);  font-weight: 600; }
+    .tbl .green { color: var(--green); }
+    .tbl .dim   { color: var(--text3); font-size: 11.5px; }
+    .tbl .strong { color: var(--text); font-weight: 600; }
+
+    .tbl-empty {
+      text-align: center;
+      padding: 36px 20px;
+      color: var(--text3);
+      font-size: 13px;
+    }
+    .tbl-empty i { display: block; font-size: 22px; margin-bottom: 8px; opacity: .4; }
+
+    /* Colonne actions à droite */
+    .tbl td.td-actions { text-align: right; white-space: nowrap; }
+
+    /* ================================================================
+       BADGES
+    ================================================================ */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: .3px;
+    }
+    .b-gold   { background: rgba(212,168,67,.15); color: var(--gold);  }
+    .b-green  { background: rgba(90,158,111,.15); color: var(--green); }
+    .b-red    { background: rgba(200,90,74,.15);  color: var(--red);   }
+    .b-amber  { background: rgba(232,145,74,.15); color: var(--amber); }
+    .b-blue   { background: rgba(90,142,200,.15); color: var(--blue);  }
+    .b-gray   { background: var(--surface2);      color: var(--text3); }
+
+    /* ================================================================
+       BOUTONS
+    ================================================================ */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: all .15s; text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn i { font-size: 11px; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+    .btn-primary {
+      background: var(--gold); color: #1a1508;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #e5b850; transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(212,168,67,.28);
+    }
+
+    .btn-secondary {
+      background: var(--surface); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--surface2); border-color: var(--border2);
+    }
+
+    .btn-ghost {
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface); color: var(--text); }
+
+    .btn-danger {
+      background: rgba(200,90,74,.1); color: var(--red);
+      border: 1px solid rgba(200,90,74,.25);
+    }
+    .btn-danger:hover:not(:disabled) { background: rgba(200,90,74,.2); }
+
+    .btn-success {
+      background: rgba(90,158,111,.1); color: var(--green);
+      border: 1px solid rgba(90,158,111,.25);
+    }
+    .btn-success:hover:not(:disabled) { background: rgba(90,158,111,.2); }
+
+    .btn-sm  { padding: 5px 11px; font-size: 11.5px; border-radius: 7px; }
+    .btn-lg  { padding: 11px 24px; font-size: 14.5px; border-radius: 10px; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ================================================================
+       FORMULAIRES
+    ================================================================ */
+
+    /* Section de formulaire avec titre */
+    .form-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    .form-section-head {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+
+    .form-section-head i { font-size: 12px; color: var(--gold); }
+
+    .form-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--text);
+      flex: 1;
+    }
+
+    /* Petit tag optionnel/requis à droite du titre section */
+    .form-section-tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .4px; padding: 2px 8px; border-radius: 20px;
+    }
+    .form-section-tag.required { background: rgba(200,90,74,.12); color: var(--red); border: 1px solid rgba(200,90,74,.2); }
+    .form-section-tag.optional { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
+    .form-section-tag.info     { background: var(--gold-glow); color: var(--gold); border: 1px solid rgba(212,168,67,.2); }
+
+    .form-section-body { padding: 20px; }
+
+    /* Bloc conditionnel ambulant */
+    .cond-block {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: var(--r);
+      padding: 16px;
+      margin-top: 14px;
+      display: none;
+    }
+    .cond-block.visible { display: block; animation: fadeUp .18s ease; }
+    .cond-block-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--amber); margin-bottom: 13px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .cond-block-label i { font-size: 10px; }
+
+    /* Grilles de formulaire */
+    .form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row1  { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 14px; }
+    .form-row:last-child, .form-row3:last-child, .form-row1:last-child { margin-bottom: 0; }
+
+    @media (max-width: 720px) { .form-row, .form-row3 { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-label {
+      font-size: 10.5px; font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase; letter-spacing: .5px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .form-label .req { color: var(--red); font-size: 13px; line-height: 1; }
+
+    /* Wrapper avec icône à gauche */
+    .input-wrap { position: relative; }
+    .input-wrap .iico {
+      position: absolute; left: 11px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px; color: var(--text3); pointer-events: none;
+    }
+    .input-wrap .form-input { padding-left: 30px; }
+
+    /* Select avec flèche custom */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '\f078';
+      font-family: 'Font Awesome 6 Free'; font-weight: 900;
+      position: absolute; right: 11px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px; color: var(--text3); pointer-events: none;
+    }
+    .select-wrap .form-select { padding-right: 28px; }
+
+    .form-input, .form-select, .form-textarea {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; color: var(--text);
+      outline: none; width: 100%;
+      transition: border-color .18s, box-shadow .18s;
+      appearance: none; -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212,168,67,.1);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
+    .form-select option { background: var(--bg3); color: var(--text); }
+    .form-textarea { resize: vertical; min-height: 78px; }
+
+    /* Champ en erreur */
+    .form-group.has-error .form-input,
+    .form-group.has-error .form-select { border-color: var(--red); }
+    .form-error-msg {
+      font-size: 11px; color: var(--red);
+      display: none; margin-top: 2px;
+    }
+    .form-group.has-error .form-error-msg { display: block; }
+
+    /* Hint sous le champ */
+    .form-hint {
+      font-size: 11px; color: var(--text3);
+      font-style: italic; margin-top: 2px;
+    }
+
+    /* Sélecteur type de présence — boutons radio stylisés */
+    .radio-deck {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .radio-card {
+      position: relative;
+      cursor: pointer;
+    }
+    .radio-card input[type="radio"] {
+      position: absolute; opacity: 0; width: 0; height: 0;
+    }
+    .radio-card-inner {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 6px; padding: 14px 10px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      text-align: center;
+      transition: all .15s;
+    }
+    .radio-card-inner .rci-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: var(--surface);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; color: var(--text3);
+      transition: all .15s;
+    }
+    .radio-card-inner .rci-label {
+      font-size: 11.5px; font-weight: 600;
+      color: var(--text2);
+      transition: color .15s;
+    }
+
+    .radio-card input:checked + .radio-card-inner {
+      border-color: var(--gold);
+      background: var(--gold-glow2);
+      box-shadow: 0 0 0 2px rgba(212,168,67,.1);
+    }
+    .radio-card input:checked + .radio-card-inner .rci-icon {
+      background: rgba(212,168,67,.15); color: var(--gold);
+    }
+    .radio-card input:checked + .radio-card-inner .rci-label { color: var(--gold); }
+
+    /* Actions de formulaire */
+    .form-actions {
+      display: flex; align-items: center;
+      justify-content: flex-end; gap: 10px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--bg3);
+    }
+
+    /* ================================================================
+       ALERTES — journal
+    ================================================================ */
+    .alert-row {
+      display: flex; align-items: flex-start;
+      gap: 12px;
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .alert-row:last-child { border-bottom: none; }
+    .alert-row:hover { background: var(--surface); }
+    .alert-row.unread { border-left: 2px solid var(--gold); }
+
+    .alert-ico-wrap {
+      width: 34px; height: 34px; flex-shrink: 0;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .alert-ico-wrap.info     { background: rgba(90,142,200,.12); color: var(--blue);  }
+    .alert-ico-wrap.warning  { background: rgba(232,145,74,.12); color: var(--amber); }
+    .alert-ico-wrap.critique { background: rgba(200,90,74,.12);  color: var(--red);   }
+
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-msg  { font-size: 13px; color: var(--text); line-height: 1.45; margin-bottom: 4px; }
+    .alert-meta {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 8px; font-size: 11.5px; color: var(--text3);
+    }
+    .alert-meta i { font-size: 9px; }
+
+    /* ================================================================
+       MINI LISTE SESSIONS (sidebar droite saisie)
+    ================================================================ */
+    .session-mini {
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    .session-mini:last-child { border-bottom: none; }
+    .session-mini:hover { background: var(--surface); }
+    .session-mini-top {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 8px;
+      margin-bottom: 3px;
+    }
+    .session-mini-id {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px; color: var(--text);
+      font-weight: 500;
+    }
+    .session-mini-meta { font-size: 11.5px; color: var(--text3); }
+    .session-mini-recette {
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px; color: var(--gold);
+      font-weight: 500;
+    }
+
+    /* ================================================================
+       SÉPARATEUR MÉTIER (entre les deux formulaires enregistrement)
+    ================================================================ */
+    .rule-banner {
+      display: flex; align-items: center;
+      gap: 14px;
+      padding: 11px 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      margin: 6px 0 20px;
+      font-size: 12px; color: var(--text3);
+    }
+    .rule-banner i { color: var(--amber); font-size: 13px; flex-shrink: 0; }
+
+    /* ================================================================
+       LOADER PAGE INITIALE
+    ================================================================ */
+    #page-loader {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; z-index: 9000;
+      transition: opacity .35s;
+    }
+    #page-loader.hidden { opacity: 0; pointer-events: none; }
+    .loader-ring {
+      width: 40px; height: 40px;
+      border: 2.5px solid var(--border2);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-label { font-size: 12px; color: var(--text3); letter-spacing: .4px; }
+
+    /* ================================================================
+       SPINNER BOUTON
+    ================================================================ */
+    .btn-spinner {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(0,0,0,.2);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ================================================================
+       UTILITAIRES
+    ================================================================ */
+    .mb-20 { margin-bottom: 20px; }
+    .mb-14 { margin-bottom: 14px; }
+    .mt-14 { margin-top: 14px; }
+    .flex-row { display: flex; align-items: center; gap: 10px; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .text-gold  { color: var(--gold);  }
+    .text-green { color: var(--green); }
+    .text-red   { color: var(--red);   }
+    .text-dim   { color: var(--text3); font-size: 12px; }
+    .mono { font-family: 'DM Mono', monospace; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+  </style>
+</head>
+
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     LOADER
+══════════════════════════════════════════════════════ -->
+<div id="page-loader">
+  <div class="loader-ring"></div>
+  <span class="loader-label">Connexion au backend…</span>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     SNACKBARS
+══════════════════════════════════════════════════════ -->
+<div id="snack-container"></div>
+
+<!-- ══════════════════════════════════════════════════════
+     APP LAYOUT
+══════════════════════════════════════════════════════ -->
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="brand-logo"><i class="fa-solid fa-store"></i></div>
+      <div class="brand-title">Marché Dang</div>
+      <div class="brand-sub">Ngaoundéré 3ème — VST</div>
+
+      <!-- Statut API -->
+      <div class="api-row">
+        <div class="status-dot" id="api-dot"></div>
+        <span class="api-label" id="api-label">Connexion…</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section-label">Principal</div>
+
+      <button class="nav-item active" id="nav-dashboard" onclick="goTo('dashboard')">
+        <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
+        Tableau de bord
+      </button>
+
+      <button class="nav-item" id="nav-saisie" onclick="goTo('saisie')">
+        <span class="nav-icon"><i class="fa-solid fa-pen-to-square"></i></span>
+        Saisie session
+      </button>
+
+      <div class="nav-section-label" style="margin-top:6px">Référentiels</div>
+
+      <button class="nav-item" id="nav-enregistrement" onclick="goTo('enregistrement')">
+        <span class="nav-icon"><i class="fa-solid fa-circle-plus"></i></span>
+        Enregistrement
+      </button>
+
+      <button class="nav-item" id="nav-commercants" onclick="goTo('commercants')">
+        <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+        Commerçants
+      </button>
+     
+      <button class="nav-item" id="nav-categories" onclick="goTo('categories')">
+        <span class="nav-icon"><i class="fa-solid fa-folder-plus"></i></span>
+        Catégories
+      </button>
+      <button class="nav-item" id="nav-activites" onclick="goTo('activites')">
+        <span class="nav-icon"><i class="fa-solid fa-tag"></i></span>
+        Activités
+      </button>
+
+      <div class="nav-section-label" style="margin-top:6px">Veille</div>
+
+      <button class="nav-item" id="nav-alertes" onclick="goTo('alertes')">
+        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>
+        Alertes
+        <span class="nav-badge zero" id="nav-badge-alertes">0</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      Module VST 2025/2026<br/>
+      Encadrant : Prof. Dr.-Ing. Paul DAYANG
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div>
+          <div class="topbar-title" id="topbar-title">Tableau de bord</div>
+          <div class="topbar-sub" id="topbar-sub">Vue d'ensemble du marché</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost btn-sm" onclick="refreshCurrent()">
+          <i class="fa-solid fa-rotate-right"></i> Actualiser
+        </button>
+      </div>
+    </div>
+
+    <!-- CONTENU PAGES -->
+    <div class="content">
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : DASHBOARD
+      ══════════════════════════════════════════════════ -->
+      <div class="page active" id="page-dashboard">
+
+        <!-- KPIs -->
+        <div class="grid-4 mb-20">
+          <div class="stat-card gold">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-label">Commerçants actifs</div>
+            <div class="stat-value" id="kpi-com">—</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><i class="fa-solid fa-tag"></i></div>
+            <div class="stat-label">Activités suivies</div>
+            <div class="stat-value" id="kpi-act">—</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-icon"><i class="fa-solid fa-location-dot"></i></div>
+            <div class="stat-label">Zones marché</div>
+            <div class="stat-value" id="kpi-zones">—</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
+            <div class="stat-label">Alertes non lues</div>
+            <div class="stat-value" id="kpi-alertes">—</div>
+          </div>
+        </div>
+
+        <!-- CA Semaine -->
+        <div class="card mb-20">
+          <div class="card-head">
+            <div class="card-head-title">
+              <i class="fa-solid fa-coins"></i>
+              Chiffre d'affaires — semaine en cours
+            </div>
+            <span id="dash-tendance" class="badge b-gray">—</span>
+          </div>
+          <div class="card-body">
+            <div style="display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap">
+              <div>
+                <div class="text-dim" style="margin-bottom:4px">Cette semaine</div>
+                <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--gold)" id="dash-ca-cur">—</div>
+                <div class="text-dim">FCFA</div>
+              </div>
+              <div>
+                <div class="text-dim" style="margin-bottom:4px">Semaine précédente</div>
+                <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text2)" id="dash-ca-prev">—</div>
+                <div class="text-dim">FCFA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top activités + Alertes récentes -->
+        <div class="grid-2r">
+
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head-title">
+                <i class="fa-solid fa-ranking-star"></i> Top activités du mois
+              </div>
+              <span class="text-dim">par CA</span>
+            </div>
+            <div class="card-body-flush">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Activité</th>
+                    <th>CA (FCFA)</th>
+                    <th>Tendance</th>
+                  </tr>
+                </thead>
+                <tbody id="top-tbody">
+                  <tr><td colspan="4" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="card-head-title">
+                <i class="fa-solid fa-bell"></i> Alertes récentes
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="goTo('alertes')">
+                Voir tout <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+            <div id="dash-alertes-list">
+              <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /page-dashboard -->
+      <!-- ══════════════════════════════════════════════════
+           PAGE : CATEGORIES
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-categories">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-title">
+              <i class="fa-solid fa-folder-plus"></i> Nouvelle catégorie
+            </div>
+          </div>
+      
+          <form id="form-category" novalidate>
+            <div class="form-section-body" style="padding:20px">
+              <!-- Input for Category Name -->
+              <div class="form-row">
+                <div class="form-group" id="fg-cat-nom">
+                  <label class="form-label">Nom de la catégorie <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-folder"></i>
+                    <input class="form-input" type="text" id="cat-nom" required placeholder="ex : Alimentation, Vêtements…" />
+                  </div>
+                  <span class="form-error-msg">Nom obligatoire</span>
+                </div>
+              </div>
+      
+              <!-- Input for Category Description -->
+              <div class="form-row">
+                <div class="form-group" id="fg-cat-desc">
+                  <label class="form-label">Description <span class="req">*</span></label>
+                  <textarea class="form-textarea" id="cat-desc" required placeholder="Description de la catégorie…"></textarea>
+                  <span class="form-error-msg">Description obligatoire</span>
+                </div>
+              </div>
+      
+              <!-- Input for Category Icon -->
+              <div class="form-row">
+                <div class="form-group" id="fg-cat-icon">
+                  <label class="form-label">Icône (Font Awesome) <span class="req"></span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-icons"></i>
+                    <input class="form-input" type="text" id="cat-icon" required placeholder="ex : fa-utensils, fa-tshirt…" />
+                  </div>
+                  <span class="form-hint">Utilisez une classe Font Awesome (ex : fa-utensils)</span>
+                  <span class="form-error-msg">Icône obligatoire</span>
+                </div>
+              </div>
+            </div>
+      
+            <!-- Form Actions -->
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetCategory()">
+                <i class="fa-solid fa-xmark"></i> Réinitialiser
+              </button>
+              <button type="submit" class="btn btn-primary" id="btn-category">
+                <i class="fa-solid fa-folder-plus"></i> Enregistrer la catégorie
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!--  page des categories -->
+      <!-- ══════════════════════════════════════════════════
+           PAGE : SAISIE SESSION JOURNALIÈRE
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-saisie">
+        <div class="grid-2l" style="align-items:start">
+
+          <!-- Formulaire saisie -->
+          <div>
+            <form id="form-session" novalidate>
+
+              <!-- Bloc : Commerçant -->
+              <div class="form-section mb-14">
+                <div class="form-section-head">
+                  <i class="fa-solid fa-user-tie"></i>
+                  <span class="form-section-title">Commerçant</span>
+                </div>
+                <div class="form-section-body">
+                  <div class="form-row1">
+                    <div class="form-group" id="fg-s-com">
+                      <label class="form-label">Sélectionner le commerçant <span class="req">*</span></label>
+                      <div class="select-wrap">
+                        <select class="form-select" id="s-com" required onchange="onComSelect()">
+                          <option value="">— Téléphone / Nom commercial —</option>
+                        </select>
+                      </div>
+                      <span class="form-error-msg">Veuillez sélectionner un commerçant</span>
+                    </div>
+                  </div>
+                  <!-- Infos en lecture seule après sélection -->
+                  <div id="com-info-strip" style="display:none">
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Type de présence</label>
+                        <input class="form-input" id="ci-type" readonly style="color:var(--text2);cursor:default" />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Activité principale</label>
+                        <input class="form-input" id="ci-act" readonly style="color:var(--text2);cursor:default" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloc : Session -->
+              <div class="form-section mb-14">
+                <div class="form-section-head">
+                  <i class="fa-solid fa-calendar-day"></i>
+                  <span class="form-section-title">Session du jour</span>
+                </div>
+                <div class="form-section-body">
+                  <div class="form-row">
+                    <div class="form-group" id="fg-s-date">
+                      <label class="form-label">Date <span class="req">*</span></label>
+                      <div class="input-wrap">
+                        <i class="iico fa-regular fa-calendar"></i>
+                        <input class="form-input" type="date" id="s-date" required />
+                      </div>
+                      <span class="form-error-msg">Date obligatoire</span>
+                    </div>
+                    <div class="form-group" id="fg-s-statut">
+                      <label class="form-label">Statut <span class="req">*</span></label>
+                      <div class="select-wrap">
+                        <select class="form-select" id="s-statut" required onchange="onStatutChange()">
+                          <option value="ouvert">Ouvert</option>
+                          <option value="ferme">Fermé</option>
+                          <option value="absent_maladie">Absent — maladie</option>
+                          <option value="absent_approvisionnement">Absent — approvisionnement</option>
+                          <option value="inconnu">Inconnu</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group" id="fg-s-act">
+                      <label class="form-label">Activité exercée ce jour <span class="req">*</span></label>
+                      <div class="select-wrap">
+                        <select class="form-select" id="s-act" required>
+                          <option value="">— Sélectionner —</option>
+                        </select>
+                      </div>
+                      <span class="form-hint">Peut différer de l'activité principale</span>
+                      <span class="form-error-msg">Activité obligatoire</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Zone d'observation</label>
+                      <div class="select-wrap">
+                        <select class="form-select" id="s-zone">
+                          <option value="">— Facultatif —</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloc : Recette (affiché si statut = ouvert) -->
+              <div class="form-section mb-14" id="bloc-recette">
+                <div class="form-section-head">
+                  <i class="fa-solid fa-money-bill-wave"></i>
+                  <span class="form-section-title">Recette journalière</span>
+                </div>
+                <div class="form-section-body">
+                  <div class="form-row">
+                    <div class="form-group" id="fg-s-recette">
+                      <label class="form-label">Montant global déclaré (FCFA) <span class="req">*</span></label>
+                      <div class="input-wrap">
+                        <i class="iico fa-solid fa-coins"></i>
+                        <input class="form-input" type="number" id="s-recette"
+                               min="0" step="100" placeholder="ex : 15 000" />
+                      </div>
+                      <span class="form-hint">Total journalier — pas de détail par produit</span>
+                      <span class="form-error-msg">Montant obligatoire si le commerçant est ouvert</span>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Fiabilité de la donnée</label>
+                      <div class="select-wrap">
+                        <select class="form-select" id="s-fiab">
+                          <option value="0.90">0.90 — Agent + fiche papier (défaut)</option>
+                          <option value="0.65">0.65 — Déclaration directe</option>
+                          <option value="0.40">0.40 — Estimation terrain</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloc : Notes -->
+              <div class="form-section mb-14">
+                <div class="form-section-head">
+                  <i class="fa-solid fa-note-sticky"></i>
+                  <span class="form-section-title">Notes de terrain</span>
+                  <span class="form-section-tag optional">Facultatif</span>
+                </div>
+                <div class="form-section-body">
+                  <div class="form-row1">
+                    <div class="form-group full">
+                      <textarea class="form-textarea" id="s-notes"
+                                placeholder="Observations qualitatives, contexte, remarques de l'agent…"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="resetSession()">
+                  <i class="fa-solid fa-xmark"></i> Réinitialiser
+                </button>
+                <button type="submit" class="btn btn-primary" id="btn-session">
+                  <i class="fa-solid fa-floppy-disk"></i> Enregistrer la session
+                </button>
+              </div>
+
+            </form>
+          </div>
+
+          <!-- Mini-liste des dernières sessions -->
+          <div class="card" style="position:sticky;top:78px">
+            <div class="card-head">
+              <div class="card-head-title">
+                <i class="fa-solid fa-clock-rotate-left"></i> Sessions récentes
+              </div>
+              <span class="text-dim">50 dernières</span>
+            </div>
+            <div id="sessions-list" style="max-height:560px;overflow-y:auto">
+              <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /page-saisie -->
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : ENREGISTREMENT
+           Règle métier :
+             - Activité = autonome (pas besoin de commerçant)
+             - Commerçant = activité OBLIGATOIRE
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-enregistrement">
+
+        <!-- ─── FORMULAIRE ACTIVITÉ ─── -->
+        <div class="card mb-20">
+          <div class="card-head">
+            <div class="card-head-title">
+              <i class="fa-solid fa-tag"></i> Nouvelle activité
+            </div>
+            <span class="badge b-gold">
+              <i class="fa-solid fa-bolt"></i> Alerte + push mobile auto
+            </span>
+          </div>
+
+          <form id="form-act" novalidate>
+
+            <div class="form-section-body" style="padding:20px">
+              <div class="form-row">
+                <div class="form-group" id="fg-a-cat">
+                  <label class="form-label">Catégorie <span class="req">*</span></label>
+                  <div class="select-wrap">
+                    <select class="form-select" id="a-cat" required>
+                      <option value="">— Sélectionner —</option>
+                    </select>
+                  </div>
+                  <span class="form-error-msg">Catégorie obligatoire</span>
+                </div>
+                <div class="form-group" id="fg-a-nom">
+                  <label class="form-label">Nom de l'activité <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-tag"></i>
+                    <input class="form-input" type="text" id="a-nom" required
+                           placeholder="ex : Vente de maïs en gros" />
+                  </div>
+                  <span class="form-error-msg">Nom obligatoire</span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group full">
+                  <label class="form-label">Mots-clés (recherche mobile)</label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-magnifying-glass"></i>
+                    <input class="form-input" type="text" id="a-mots"
+                           placeholder="mais cereale grain farine sac gros…" />
+                  </div>
+                  <span class="form-hint">Séparés par des espaces — utilisés pour la veille sur l'app mobile</span>
+                </div>
+              </div>
+              <div class="form-row1">
+                <div class="form-group" id="fg-a-date">
+                  <label class="form-label">Date de première observation <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-regular fa-calendar"></i>
+                    <input class="form-input" type="date" id="a-date" required />
+                  </div>
+                  <span class="form-hint">Peut précéder la date d'aujourd'hui</span>
+                  <span class="form-error-msg">Date obligatoire</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetAct()">
+                <i class="fa-solid fa-xmark"></i> Réinitialiser
+              </button>
+              <button type="submit" class="btn btn-primary" id="btn-act">
+                <i class="fa-solid fa-tag"></i> Enregistrer l'activité
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Séparateur règle métier -->
+        <div class="rule-banner">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>
+            Pour enregistrer un commerçant, une activité doit d'abord exister en base.
+            Si l'activité vient d'être créée, elle est immédiatement disponible ci-dessous.
+          </span>
+        </div>
+
+        <!-- ─── FORMULAIRE COMMERÇANT ─── -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-title">
+              <i class="fa-solid fa-user-plus"></i> Nouveau commerçant
+            </div>
+            <span class="badge b-red">
+              <i class="fa-solid fa-link"></i> Activité requise
+            </span>
+          </div>
+
+          <form id="form-com" novalidate>
+
+            <!-- Activité liée — OBLIGATOIRE -->
+            <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin-bottom:13px;display:flex;align-items:center;gap:7px">
+                <i class="fa-solid fa-link"></i> Activité principale — obligatoire
+              </div>
+              <div class="form-row">
+                <div class="form-group" id="fg-c-act">
+                  <label class="form-label">Activité <span class="req">*</span></label>
+                  <div class="select-wrap">
+                    <select class="form-select" id="c-act" required>
+                      <option value="">— Sélectionner une activité —</option>
+                    </select>
+                  </div>
+                  <span class="form-hint">Doit exister avant l'enregistrement du commerçant</span>
+                  <span class="form-error-msg">Activité obligatoire pour enregistrer un commerçant</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Zone principale</label>
+                  <div class="select-wrap">
+                    <select class="form-select" id="c-zone">
+                      <option value="">— Optionnel —</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Identité -->
+            <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
+                <i class="fa-solid fa-id-card"></i> Identité
+              </div>
+              <div class="form-row">
+                <div class="form-group" id="fg-c-tel">
+                  <label class="form-label">Téléphone (identifiant unique) <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-phone"></i>
+                    <input class="form-input" type="tel" id="c-tel" required
+                           placeholder="6XX XXX XXX" />
+                  </div>
+                  <span class="form-hint">Identifiant principal — anonymat préservé</span>
+                  <span class="form-error-msg">Numéro de téléphone obligatoire</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nom commercial</label>
+                  <div class="input-wrap">
+                    <i class="iico fa-solid fa-store"></i>
+                    <input class="form-input" type="text" id="c-nom"
+                           placeholder="ex : Chez Fatima, Dépôt Moussa…" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-row1">
+                <div class="form-group" id="fg-c-date">
+                  <label class="form-label">Date de première observation <span class="req">*</span></label>
+                  <div class="input-wrap">
+                    <i class="iico fa-regular fa-calendar"></i>
+                    <input class="form-input" type="date" id="c-date" required />
+                  </div>
+                  <span class="form-error-msg">Date obligatoire</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Type de présence -->
+            <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
+                <i class="fa-solid fa-location-dot"></i> Type de présence
+              </div>
+
+              <div class="radio-deck">
+                <label class="radio-card">
+                  <input type="radio" name="type_pres" value="sedentaire" checked
+                         onchange="onTypePresChange('sedentaire')" />
+                  <div class="radio-card-inner">
+                    <div class="rci-icon"><i class="fa-solid fa-store"></i></div>
+                    <div class="rci-label">Sédentaire</div>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="type_pres" value="ambulant"
+                         onchange="onTypePresChange('ambulant')" />
+                  <div class="radio-card-inner">
+                    <div class="rci-icon"><i class="fa-solid fa-person-walking"></i></div>
+                    <div class="rci-label">Ambulant</div>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="type_pres" value="semi_sedentaire"
+                         onchange="onTypePresChange('semi_sedentaire')" />
+                  <div class="radio-card-inner">
+                    <div class="rci-icon"><i class="fa-solid fa-arrows-left-right"></i></div>
+                    <div class="rci-label">Semi-sédentaire</div>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Champs ambulant (conditionnels) -->
+              <div class="cond-block" id="bloc-ambulant">
+                <div class="cond-block-label">
+                  <i class="fa-solid fa-route"></i> Informations circuit ambulant
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Zones du circuit habituel</label>
+                    <div class="input-wrap">
+                      <i class="iico fa-solid fa-map-pin"></i>
+                      <input class="form-input" type="text" id="c-circuit"
+                             placeholder='["Zone A", "Bord de route", "Zone nord"]' />
+                    </div>
+                    <span class="form-hint">Format JSON list des zones parcourues</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Point de départ</label>
+                    <div class="input-wrap">
+                      <i class="iico fa-solid fa-house"></i>
+                      <input class="form-input" type="text" id="c-depart"
+                             placeholder="Dépôt / domicile de départ" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
+                <i class="fa-solid fa-note-sticky"></i> Notes <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">&nbsp;(facultatif)</span>
+              </div>
+              <div class="form-row1">
+                <div class="form-group full">
+                  <textarea class="form-textarea" id="c-notes"
+                            placeholder="Observations de terrain, contexte particulier…"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetCom()">
+                <i class="fa-solid fa-xmark"></i> Réinitialiser
+              </button>
+              <button type="submit" class="btn btn-success" id="btn-com">
+                <i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+      </div><!-- /page-enregistrement -->
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : COMMERÇANTS
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-commercants">
+        <div class="flex-between mb-20">
+          <div class="flex-row">
+            <div class="select-wrap" style="min-width:190px">
+              <select class="form-select" id="f-com-act" onchange="loadComs()">
+                <option value="">Toutes activités</option>
+              </select>
+            </div>
+            <div class="select-wrap" style="min-width:170px">
+              <select class="form-select" id="f-com-type" onchange="loadComs()">
+                <option value="">Tous types</option>
+                <option value="sedentaire">Sédentaire</option>
+                <option value="ambulant">Ambulant</option>
+                <option value="semi_sedentaire">Semi-sédentaire</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')">
+            <i class="fa-solid fa-user-plus"></i> Nouveau commerçant
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-body-flush">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Téléphone</th>
+                  <th>Nom commercial</th>
+                  <th>Activité principale</th>
+                  <th>Type</th>
+                  <th>Zone principale</th>
+                  <th>1ère obs.</th>
+                  <th>Statut</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-com">
+                <tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /page-commercants -->
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : ACTIVITÉS
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-activites">
+        <div class="flex-between mb-20">
+          <div class="select-wrap" style="min-width:200px">
+            <select class="form-select" id="f-act-cat" onchange="loadActs()">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')">
+            <i class="fa-solid fa-plus"></i> Nouvelle activité
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-body-flush">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Nom de l'activité</th>
+                  <th>Catégorie</th>
+                  <th>Mots-clés</th>
+                  <th>1ère observation</th>
+                  <th>Statut</th>
+                  <th style="text-align:right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-act">
+                <tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- /page-activites -->
+
+      <!-- ══════════════════════════════════════════════════
+           PAGE : ALERTES
+      ══════════════════════════════════════════════════ -->
+      <div class="page" id="page-alertes">
+        <div class="flex-between mb-20">
+          <div class="select-wrap" style="min-width:200px">
+            <select class="form-select" id="f-alerte-lue" onchange="loadAlertes()">
+              <option value="">Toutes les alertes</option>
+              <option value="false">Non lues uniquement</option>
+              <option value="true">Lues uniquement</option>
+            </select>
+          </div>
+          <div class="flex-row">
+            <button class="btn btn-ghost btn-sm" onclick="toutLu()">
+              <i class="fa-solid fa-check-double"></i> Tout marquer lu
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="loadAlertes()">
+              <i class="fa-solid fa-rotate-right"></i> Actualiser
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div id="alertes-list">
+            <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
+          </div>
+        </div>
+      </div><!-- /page-alertes -->
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
+<script>
+  /* ──────────────────────────────────────────────────────
+     CONFIG API
+  ────────────────────────────────────────────────────── */
+  const API = 'http://localhost:8000';
+
+  /* ──────────────────────────────────────────────────────
+     ÉTAT GLOBAL — caches référentiels
+  ────────────────────────────────────────────────────── */
+  let CATS = [], ACTS = [], ZONES = [], COMS = [];
+  let currentPage = 'dashboard';
+
+  /* ──────────────────────────────────────────────────────
+     SNACKBAR
+     Affiche une notification temporaire.
+     type: 'success' | 'error' | 'warn' | 'info'
+  ────────────────────────────────────────────────────── */
+  function snack(title, msg = '', type = 'info', ms = 4500) {
+    const icons = {
+      success: 'fa-circle-check',
+      error:   'fa-circle-xmark',
+      warn:    'fa-triangle-exclamation',
+      info:    'fa-bell',
+    };
+
+    const el = document.createElement('div');
+    el.className = `snack ${type}`;
+    el.innerHTML = `
+      <div class="snack-icon-wrap"><i class="fa-solid ${icons[type] || 'fa-bell'}"></i></div>
+      <div class="snack-body">
+        <div class="snack-title">${title}</div>
+        ${msg ? `<div class="snack-msg">${msg}</div>` : ''}
+      </div>
+      <button class="snack-close" onclick="dismissSnack(this.parentElement)" title="Fermer">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+
+    document.getElementById('snack-container').appendChild(el);
+    setTimeout(() => dismissSnack(el), ms);
+  }
+
+  function dismissSnack(el) {
+    if (!el?.parentElement) return;
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 280);
+  }
+
+  /* ──────────────────────────────────────────────────────
+     APPEL API — wrapper fetch avec gestion d'erreurs
+  ────────────────────────────────────────────────────── */
+  async function apiFetch(method, endpoint, body = null) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+
+    const res = await fetch(`${API}${endpoint}`, opts);
+
+    if (!res.ok) {
+      let detail = `Erreur ${res.status}`;
+      try { const d = await res.json(); detail = d.detail || JSON.stringify(d); } catch (_) {}
+      throw new Error(detail);
+    }
+
+    if (res.status === 204) return null;
+    return res.json();
+  }
+
+  /* ──────────────────────────────────────────────────────
+     FORMATAGE
+  ────────────────────────────────────────────────────── */
+  function fcfa(n) {
+    if (n == null) return '—';
+    return new Intl.NumberFormat('fr-FR').format(Math.round(n));
+  }
+
+  function dateStr(s) {
+    if (!s) return '—';
+    const [y, m, d] = s.split('T')[0].split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function tendanceBadge(t) {
+    if (!t) return '<span class="badge b-gray">—</span>';
+    const map = {
+      hausse: ['b-red',   'fa-arrow-trend-up',   'Hausse'],
+      baisse: ['b-green', 'fa-arrow-trend-down',  'Baisse'],
+      stable: ['b-gray',  'fa-minus',             'Stable'],
+    };
+    const [cls, ico, label] = map[t] || ['b-gray', 'fa-minus', t];
+    return `<span class="badge ${cls}"><i class="fa-solid ${ico}"></i> ${label}</span>`;
+  }
+
+  function statutBadge(actif) {
+    return actif
+      ? '<span class="badge b-green"><i class="fa-solid fa-circle"></i> Actif</span>'
+      : '<span class="badge b-gray"><i class="fa-regular fa-circle"></i> Inactif</span>';
+  }
+
+  function presenceBadge(t) {
+    const map = {
+      sedentaire:      ['b-gold',  'fa-store',               'Sédentaire'],
+      ambulant:        ['b-amber', 'fa-person-walking',       'Ambulant'],
+      semi_sedentaire: ['b-gray',  'fa-arrows-left-right',    'Semi-séd.'],
+    };
+    const [cls, ico, label] = map[t] || ['b-gray', 'fa-circle', t];
+    return `<span class="badge ${cls}"><i class="fa-solid ${ico}"></i> ${label}</span>`;
+  }
+
+  function niveauIco(n) {
+    return { info: 'fa-circle-info', warning: 'fa-triangle-exclamation', critique: 'fa-circle-exclamation' }[n] || 'fa-bell';
+  }
+
+  /* ──────────────────────────────────────────────────────
+     NAVIGATION
+  ────────────────────────────────────────────────────── */
+  const PAGE_META = {
+    dashboard:      ['Tableau de bord',     'Vue d\'ensemble du marché Dang'],
+    saisie:         ['Saisie de session',   'Enregistrement des données terrain du jour'],
+    enregistrement: ['Enregistrement',      'Nouvelle activité et/ou nouveau commerçant'],
+    commercants:    ['Commerçants',         'Tous les commerçants recensés'],
+    categories:     ['Catégories',          'Toutes les catégories d\'activités'],
+    activites:      ['Activités',           'Toutes les activités commerciales suivies'],
+    alertes:        ['Journal des alertes', 'Événements détectés automatiquement'],
+  };
+
+  function goTo(page) {
+    /* Masquer toutes les pages et désactiver tous les nav-items */
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+    /* Activer la page et le nav-item ciblés */
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.getElementById(`nav-${page}`).classList.add('active');
+
+    /* Mettre à jour la topbar */
+    const [title, sub] = PAGE_META[page] || [page, ''];
+    document.getElementById('topbar-title').textContent = title;
+    document.getElementById('topbar-sub').textContent   = sub;
+
+    currentPage = page;
+
+    /* Charger les données selon la page */
+    const loaders = {
+      dashboard:      loadDashboard,
+      saisie:         loadSaisie,
+      enregistrement: loadEnregistrement,
+      commercants:    loadComs,
+      activites:      loadActs,
+      alertes:        loadAlertes,
+    };
+    if (loaders[page]) loaders[page]();
+  }
+
+  function refreshCurrent() { goTo(currentPage); }
+
+  /* ──────────────────────────────────────────────────────
+     RÉFÉRENTIELS — chargement + population des selects
+  ────────────────────────────────────────────────────── */
+  async function loadRefs() {
+    try {
+      /* Chargement parallèle des 4 référentiels */
+      const [cats, acts, zones, coms] = await Promise.all([
+        apiFetch('GET', '/categories/'),
+        apiFetch('GET', '/activites/'),
+        apiFetch('GET', '/zones/'),
+        apiFetch('GET', '/commercants/'),
+      ]);
+      CATS  = cats  || [];
+      ACTS  = acts  || [];
+      ZONES = zones || [];
+      COMS  = coms  || [];
+      populateSelects();
+    } catch (e) {
+      console.warn('Référentiels:', e.message);
+    }
+  }
+
+  /** Remplit tous les selects de l'app */
+  function populateSelects() {
+    /* Catégories */
+    ['a-cat', 'f-act-cat'].forEach(id => {
+      const s = document.getElementById(id); if (!s) return;
+      const ph = s.options[0];
+      s.innerHTML = ''; s.appendChild(ph);
+      CATS.forEach(c => { const o = new Option(c.nom, c.id); s.appendChild(o); });
+    });
+
+    /* Activités */
+    ['c-act', 's-act', 'f-com-act'].forEach(id => {
+      const s = document.getElementById(id); if (!s) return;
+      const ph = s.options[0];
+      s.innerHTML = ''; s.appendChild(ph);
+      ACTS.forEach(a => { const o = new Option(a.nom, a.id); s.appendChild(o); });
+    });
+
+    /* Zones */
+    ['s-zone', 'c-zone'].forEach(id => {
+      const s = document.getElementById(id); if (!s) return;
+      const ph = s.options[0];
+      s.innerHTML = ''; s.appendChild(ph);
+      ZONES.forEach(z => { const o = new Option(z.nom, z.id); s.appendChild(o); });
+    });
+
+    /* Commerçants */
+    const sc = document.getElementById('s-com'); if (sc) {
+      const ph = sc.options[0];
+      sc.innerHTML = ''; sc.appendChild(ph);
+      COMS.forEach(c => {
+        const lbl = c.telephone + (c.nom_commercial ? ' — ' + c.nom_commercial : '');
+        const o = new Option(lbl, c.id);
+        o.dataset.type = c.type_presence;
+        o.dataset.act  = c.activite?.nom || '';
+        o.dataset.actId = c.activite?.id || '';
+        sc.appendChild(o);
+      });
+    }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     STATUT API
+  ────────────────────────────────────────────────────── */
+  async function checkApi() {
+    const dot   = document.getElementById('api-dot');
+    const label = document.getElementById('api-label');
+    try {
+      await apiFetch('GET', '/health');
+      dot.className = 'status-dot ok';
+      label.textContent = 'API connectée';
+    } catch (_) {
+      dot.className = 'status-dot err';
+      label.textContent = 'Hors ligne';
+      snack('Backend inaccessible',
+        `Démarrez : uvicorn app.main:app --reload (port 8000)`,
+        'error', 8000);
+    }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     DASHBOARD
+  ────────────────────────────────────────────────────── */
+  async function loadDashboard() {
+    try {
+      const d = await apiFetch('GET', '/indicateurs/dashboard');
+
+      document.getElementById('kpi-com').textContent     = d.nb_commercants_actifs ?? '—';
+      document.getElementById('kpi-act').textContent     = d.nb_activites_suivies   ?? '—';
+      document.getElementById('kpi-zones').textContent   = d.nb_zones               ?? '—';
+      document.getElementById('kpi-alertes').textContent = d.nb_alertes_non_lues    ?? '—';
+      document.getElementById('dash-ca-cur').textContent  = fcfa(d.ca_semaine_courante);
+      document.getElementById('dash-ca-prev').textContent = fcfa(d.ca_semaine_precedente);
+      document.getElementById('dash-tendance').outerHTML  = tendanceBadge(d.tendance_globale);
+
+      /* Badge alertes nav */
+      updateAlerteBadge(d.nb_alertes_non_lues || 0);
+
+      renderTopActivites(d.top_activites || []);
+      renderDashAlertes(d.alertes_recentes || []);
+    } catch (e) {
+      snack('Erreur dashboard', e.message, 'error');
+    }
+  }
+
+  function updateAlerteBadge(n) {
+    const b = document.getElementById('nav-badge-alertes');
+    b.textContent = n;
+    b.className   = n > 0 ? 'nav-badge' : 'nav-badge zero';
+  }
+
+  function renderTopActivites(list) {
+    const tb = document.getElementById('top-tbody');
+    if (!list.length) {
+      tb.innerHTML = '<tr><td colspan="4" class="tbl-empty"><i class="fa-solid fa-chart-bar"></i>Aucun indicateur pour ce mois</td></tr>';
+      return;
+    }
+    tb.innerHTML = list.map((ind, i) => `
+      <tr>
+        <td class="strong">#${i+1}</td>
+        <td class="strong">${ind.activite?.nom || '—'}</td>
+        <td class="mono gold">${fcfa(ind.ca_total)}</td>
+        <td>${tendanceBadge(ind.tendance)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderDashAlertes(list) {
+    const d = document.getElementById('dash-alertes-list');
+    if (!list.length) {
+      d.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte récente</div>';
+      return;
+    }
+    d.innerHTML = list.map(a => `
+      <div class="alert-row ${!a.lue ? 'unread' : ''}">
+        <div class="alert-ico-wrap ${a.niveau}">
+          <i class="fa-solid ${niveauIco(a.niveau)}"></i>
+        </div>
+        <div class="alert-body">
+          <div class="alert-msg">${a.message}</div>
+          <div class="alert-meta">
+            <i class="fa-regular fa-clock"></i> ${dateStr(a.created_at)}
+            &nbsp;·&nbsp; ${a.type_alerte.replace(/_/g,' ')}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /* ──────────────────────────────────────────────────────
+     SAISIE SESSION
+  ────────────────────────────────────────────────────── */
+  async function loadSaisie() {
+    await loadRefs();
+    /* Pré-remplir date d'aujourd'hui */
+    document.getElementById('s-date').value = today();
+    onStatutChange();
+    await refreshSessions();
+  }
+
+  function today() { return new Date().toISOString().split('T')[0]; }
+
+  /* Affiche les infos commerçant en lecture seule après sélection */
+  function onComSelect() {
+    const sel = document.getElementById('s-com');
+    const opt = sel.selectedOptions[0];
+    const strip = document.getElementById('com-info-strip');
+
+    if (opt?.value) {
+      document.getElementById('ci-type').value = opt.dataset.type || '';
+      document.getElementById('ci-act').value  = opt.dataset.act  || '';
+      strip.style.display = 'block';
+      /* Pré-sélectionner l'activité principale dans le select session */
+      if (opt.dataset.actId) document.getElementById('s-act').value = opt.dataset.actId;
+    } else {
+      strip.style.display = 'none';
+    }
+  }
+
+  /* Masque/affiche le bloc recette selon le statut */
+  function onStatutChange() {
+    const statut = document.getElementById('s-statut').value;
+    const bloc   = document.getElementById('bloc-recette');
+    const inp    = document.getElementById('s-recette');
+    if (statut === 'ouvert') {
+      bloc.style.display = 'block';
+      inp.required = true;
+    } else {
+      bloc.style.display = 'none';
+      inp.value = ''; inp.required = false;
+    }
+  }
+
+  async function refreshSessions() {
+    const div = document.getElementById('sessions-list');
+    try {
+      const list = await apiFetch('GET', '/sessions/?limit=50');
+      if (!list?.length) {
+        div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-inbox"></i>Aucune session</div>';
+        return;
+      }
+      div.innerHTML = list.map(s => {
+        const statCls = s.statut === 'ouvert' ? 'b-green' : 'b-gray';
+        return `
+          <div class="session-mini">
+            <div class="session-mini-top">
+              <span class="session-mini-id">${s.commercant?.telephone || '—'}</span>
+              <span class="session-mini-recette">${s.recette_journaliere != null ? fcfa(s.recette_journaliere) + ' F' : ''}</span>
+            </div>
+            <div class="session-mini-meta">
+              <span class="badge ${statCls}">${s.statut}</span>
+              &nbsp; ${s.activite?.nom || ''} &nbsp;·&nbsp; ${dateStr(s.date_session)}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (e) {
+      div.innerHTML = '<div class="tbl-empty">Erreur de chargement</div>';
+    }
+  }
+
+  function resetSession() {
+    document.getElementById('form-session').reset();
+    document.getElementById('s-date').value = today();
+    document.getElementById('com-info-strip').style.display = 'none';
+    clearErrors('form-session');
+    onStatutChange();
+  }
+
+  /* Soumission formulaire session */
+  document.getElementById('form-session').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearErrors('form-session');
+
+    /* Validation */
+    let ok = true;
+    if (!val('s-com'))  { markError('fg-s-com');    ok = false; }
+    if (!val('s-act'))  { markError('fg-s-act');    ok = false; }
+    if (!val('s-date')) { markError('fg-s-date');   ok = false; }
+    const statut = val('s-statut');
+    if (statut === 'ouvert' && !val('s-recette')) { markError('fg-s-recette'); ok = false; }
+
+    if (!ok) { snack('Champs manquants', 'Remplissez tous les champs obligatoires.', 'warn'); return; }
+
+    setBtnLoading('btn-session', true);
+
+    const payload = {
+      commercant_id:   parseInt(val('s-com')),
+      activite_id:     parseInt(val('s-act')),
+      date_session:    val('s-date'),
+      statut,
+      score_fiabilite: parseFloat(val('s-fiab')),
+      notes:           val('s-notes') || null,
+    };
+
+    const z = val('s-zone');
+    if (z) payload.zone_observation_id = parseInt(z);
+    if (statut === 'ouvert' && val('s-recette'))
+      payload.recette_journaliere = parseFloat(val('s-recette'));
+
+    try {
+      await apiFetch('POST', '/sessions/', payload);
+      snack('Session enregistrée', `Session du ${dateStr(payload.date_session)} créée.`, 'success');
+      resetSession();
+      await refreshSessions();
+    } catch (e) {
+      snack('Erreur enregistrement', e.message, 'error');
+    } finally {
+      setBtnLoading('btn-session', false, '<i class="fa-solid fa-floppy-disk"></i> Enregistrer la session');
+    }
+  });
+
+  /* ──────────────────────────────────────────────────────
+     ENREGISTREMENT
+  ────────────────────────────────────────────────────── */
+  async function loadEnregistrement() {
+    await loadRefs();
+    document.getElementById('a-date').value = today();
+    document.getElementById('c-date').value = today();
+  }
+
+  /* Type de présence — afficher/masquer bloc ambulant */
+  function onTypePresChange(type) {
+    const bloc = document.getElementById('bloc-ambulant');
+    if (type === 'ambulant' || type === 'semi_sedentaire') bloc.classList.add('visible');
+    else bloc.classList.remove('visible');
+  }
+
+  function resetAct() {
+    document.getElementById('form-act').reset();
+    document.getElementById('a-date').value = today();
+    clearErrors('form-act');
+  }
+
+  function resetCom() {
+    document.getElementById('form-com').reset();
+    document.getElementById('c-date').value = today();
+    document.getElementById('bloc-ambulant').classList.remove('visible');
+    clearErrors('form-com');
+  }
+
+  /* Soumission formulaire activité */
+  document.getElementById('form-act').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearErrors('form-act');
+
+    let ok = true;
+    if (!val('a-cat'))  { markError('fg-a-cat');  ok = false; }
+    if (!val('a-nom'))  { markError('fg-a-nom');  ok = false; }
+    if (!val('a-date')) { markError('fg-a-date'); ok = false; }
+
+    if (!ok) { snack('Champs manquants', '', 'warn'); return; }
+
+    setBtnLoading('btn-act', true);
+
+    const payload = {
+      categorie_id:              parseInt(val('a-cat')),
+      nom:                       val('a-nom').trim(),
+      mots_cles:                 val('a-mots').trim() || null,
+      date_premiere_observation: val('a-date'),
+    };
+
+    try {
+      const created = await apiFetch('POST', '/activites/', payload);
+      snack('Activité créée',
+        `« ${created.nom} » enregistrée. Alerte + notification mobile envoyées.`,
+        'success', 5500);
+      resetAct();
+      await loadRefs(); /* Rafraîchir les selects pour que la nouvelle activité soit dispo */
+    } catch (e) {
+      snack('Erreur création activité', e.message, 'error');
+    } finally {
+      setBtnLoading('btn-act', false, '<i class="fa-solid fa-tag"></i> Enregistrer l\'activité');
+    }
+  });
+
+  /* Soumission formulaire commerçant */
+  document.getElementById('form-com').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearErrors('form-com');
+
+    let ok = true;
+    if (!val('c-act'))  { markError('fg-c-act');  ok = false; }
+    if (!val('c-tel'))  { markError('fg-c-tel');  ok = false; }
+    if (!val('c-date')) { markError('fg-c-date'); ok = false; }
+
+    if (!ok) { snack('Champs manquants', 'L\'activité et le téléphone sont obligatoires.', 'warn'); return; }
+
+    setBtnLoading('btn-com', true);
+
+    const type = document.querySelector('input[name="type_pres"]:checked')?.value || 'sedentaire';
+
+    const payload = {
+      activite_id:       parseInt(val('c-act')),
+      telephone:         val('c-tel').trim(),
+      nom_commercial:    val('c-nom').trim() || null,
+      type_presence:     type,
+      date_premiere_obs: val('c-date'),
+      notes:             val('c-notes').trim() || null,
+    };
+
+    const z = val('c-zone');
+    if (z) payload.zone_principale_id = parseInt(z);
+
+    if (type !== 'sedentaire') {
+      const cir = val('c-circuit').trim();
+      const dep = val('c-depart').trim();
+      if (cir) payload.zones_circuit = cir;
+      if (dep) payload.point_depart  = dep;
+    }
+
+    try {
+      await apiFetch('POST', '/commercants/', payload);
+      snack('Commerçant enregistré',
+        `${payload.telephone}${payload.nom_commercial ? ' — ' + payload.nom_commercial : ''} ajouté.`,
+        'success');
+      resetCom();
+      await loadRefs();
+    } catch (e) {
+      snack('Erreur enregistrement', e.message, 'error');
+    } finally {
+      setBtnLoading('btn-com', false, '<i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant');
+    }
+  });
+
+  /* ──────────────────────────────────────────────────────
+     COMMERÇANTS — liste
+  ────────────────────────────────────────────────────── */
+  async function loadComs() {
+    const tb = document.getElementById('tbody-com');
+    tb.innerHTML = '<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
+
+    let url = '/commercants/?';
+    const a = val('f-com-act'), t = val('f-com-type');
+    if (a) url += `activite_id=${a}&`;
+    if (t) url += `type_presence=${t}&`;
+
+    try {
+      const list = await apiFetch('GET', url);
+      if (!list?.length) {
+        tb.innerHTML = '<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-users"></i>Aucun commerçant</td></tr>';
+        return;
+      }
+      tb.innerHTML = list.map(c => `
+        <tr>
+          <td class="mono strong">${c.telephone}</td>
+          <td class="${c.nom_commercial ? 'strong' : 'dim'}">${c.nom_commercial || '—'}</td>
+          <td>${c.activite?.nom || '<span class="dim">—</span>'}</td>
+          <td>${presenceBadge(c.type_presence)}</td>
+          <td class="dim">${c.zone_principale?.nom || '—'}</td>
+          <td class="dim">${dateStr(c.date_premiere_obs)}</td>
+          <td>${statutBadge(c.actif)}</td>
+          <td class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="toggleCom(${c.id},${!c.actif})">
+              <i class="fa-solid ${c.actif ? 'fa-ban' : 'fa-circle-check'}"></i>
+              ${c.actif ? 'Désactiver' : 'Réactiver'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tb.innerHTML = `<tr><td colspan="8" class="tbl-empty">Erreur : ${e.message}</td></tr>`;
+      snack('Erreur chargement commerçants', e.message, 'error');
+    }
+  }
+
+  async function toggleCom(id, actif) {
+    try {
+      await apiFetch('PATCH', `/commercants/${id}/activer?actif=${actif}`);
+      snack(actif ? 'Commerçant réactivé' : 'Commerçant désactivé', '', actif ? 'success' : 'warn');
+      await loadComs();
+      await loadRefs();
+    } catch (e) { snack('Erreur', e.message, 'error'); }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     ACTIVITÉS — liste
+  ────────────────────────────────────────────────────── */
+  async function loadActs() {
+    const tb = document.getElementById('tbody-act');
+    tb.innerHTML = '<tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
+
+    let url = '/activites/?actif_seulement=false';
+    const cat = val('f-act-cat');
+    if (cat) url += `&categorie_id=${cat}`;
+
+    try {
+      const list = await apiFetch('GET', url);
+      if (!list?.length) {
+        tb.innerHTML = '<tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-tag"></i>Aucune activité</td></tr>';
+        return;
+      }
+      tb.innerHTML = list.map(a => `
+        <tr>
+          <td class="strong">${a.nom}</td>
+          <td class="dim">${a.categorie?.nom || '—'}</td>
+          <td><span style="font-size:11.5px;color:var(--text3);font-style:italic">${a.mots_cles || '—'}</span></td>
+          <td class="dim">${dateStr(a.date_premiere_observation)}</td>
+          <td>${statutBadge(a.actif)}</td>
+          <td class="td-actions">
+            <button class="btn btn-ghost btn-sm" onclick="toggleAct(${a.id},${!a.actif})">
+              <i class="fa-solid ${a.actif ? 'fa-ban' : 'fa-circle-check'}"></i>
+              ${a.actif ? 'Désactiver' : 'Réactiver'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tb.innerHTML = `<tr><td colspan="6" class="tbl-empty">Erreur : ${e.message}</td></tr>`;
+      snack('Erreur chargement activités', e.message, 'error');
+    }
+  }
+
+  async function toggleAct(id, actif) {
+    try {
+      await apiFetch('PATCH', `/activites/${id}/activer?actif=${actif}`);
+      snack(actif ? 'Activité réactivée' : 'Activité désactivée', '', actif ? 'success' : 'warn');
+      await loadActs(); await loadRefs();
+    } catch (e) { snack('Erreur', e.message, 'error'); }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     ALERTES — liste et actions
+  ────────────────────────────────────────────────────── */
+  async function loadAlertes() {
+    const div = document.getElementById('alertes-list');
+    div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>';
+
+    let url = '/alertes/?limit=100';
+    const lue = val('f-alerte-lue');
+    if (lue === 'false') url += '&lues=false';
+    if (lue === 'true')  url += '&lues=true';
+
+    try {
+      const list = await apiFetch('GET', url);
+      const nonLues = list?.filter(a => !a.lue).length || 0;
+      updateAlerteBadge(nonLues);
+
+      if (!list?.length) {
+        div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte</div>';
+        return;
+      }
+
+      div.innerHTML = list.map(a => `
+        <div class="alert-row ${!a.lue ? 'unread' : ''}" id="al-${a.id}">
+          <div class="alert-ico-wrap ${a.niveau}">
+            <i class="fa-solid ${niveauIco(a.niveau)}"></i>
+          </div>
+          <div class="alert-body">
+            <div class="alert-msg">${a.message}</div>
+            <div class="alert-meta">
+              <i class="fa-regular fa-clock"></i> ${dateStr(a.created_at)}
+              &nbsp;·&nbsp;
+              <span class="badge b-gray">${a.type_alerte.replace(/_/g,' ')}</span>
+              ${a.activite  ? `&nbsp;<i class="fa-solid fa-tag"></i> ${a.activite.nom}` : ''}
+              ${a.commercant ? `&nbsp;<i class="fa-solid fa-user"></i> ${a.commercant.telephone}` : ''}
+            </div>
+          </div>
+          ${!a.lue
+            ? `<button class="btn btn-ghost btn-sm" onclick="marquerLue(${a.id})">
+                 <i class="fa-solid fa-check"></i> Lu
+               </button>`
+            : `<span style="font-size:11.5px;color:var(--text3);padding:0 8px;white-space:nowrap">
+                 <i class="fa-solid fa-check-double"></i> Lu
+               </span>`
+          }
+        </div>
+      `).join('');
+    } catch (e) {
+      div.innerHTML = `<div class="tbl-empty">Erreur : ${e.message}</div>`;
+      snack('Erreur alertes', e.message, 'error');
+    }
+  }
+
+  async function marquerLue(id) {
+    try {
+      await apiFetch('PATCH', `/alertes/${id}/lue`, { lue: true });
+      snack('Alerte marquée lue', '', 'info', 2000);
+      loadAlertes();
+    } catch (e) { snack('Erreur', e.message, 'error'); }
+  }
+
+  async function toutLu() {
+    try {
+      const r = await apiFetch('PATCH', '/alertes/tout-lire');
+      snack('Toutes les alertes lues', `${r?.alertes_marquees || 0} alerte(s) marquée(s).`, 'success');
+      loadAlertes();
+      updateAlerteBadge(0);
+    } catch (e) { snack('Erreur', e.message, 'error'); }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     POLLING — badge alertes toutes les 60s
+  ────────────────────────────────────────────────────── */
+  async function pollAlertes() {
+    try {
+      const d = await apiFetch('GET', '/indicateurs/dashboard');
+      updateAlerteBadge(d?.nb_alertes_non_lues || 0);
+    } catch (_) { /* silencieux */ }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     UTILITAIRES FORMULAIRES
+  ────────────────────────────────────────────────────── */
+
+  /** Valeur d'un champ par son ID */
+  function val(id) {
+    return document.getElementById(id)?.value || '';
+  }
+
+  /** Marque un form-group en erreur */
+  function markError(fgId) {
+    document.getElementById(fgId)?.classList.add('has-error');
+  }
+
+  /** Efface tous les états d'erreur d'un formulaire */
+  function clearErrors(formId) {
+    document.querySelectorAll(`#${formId} .form-group.has-error`)
+      .forEach(fg => fg.classList.remove('has-error'));
+  }
+
+  /** Met un bouton en état chargement / normal */
+  function setBtnLoading(id, loading, originalHTML = '') {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = loading;
+    if (loading) {
+      btn.dataset.orig = btn.innerHTML;
+      btn.innerHTML = '<span class="btn-spinner"></span> Envoi…';
+    } else {
+      btn.innerHTML = originalHTML || btn.dataset.orig || '';
+    }
+  }
+
+  /* ──────────────────────────────────────────────────────
+     INITIALISATION
+  ────────────────────────────────────────────────────── */
+  async function init() {
+    await checkApi();
+    await loadRefs();
+    await loadDashboard();
+
+    /* Pré-remplir dates */
+    const t = today();
+    ['s-date','a-date','c-date'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = t;
+    });
+
+    onStatutChange();
+
+    /* Masquer le loader */
+    const loader = document.getElementById('page-loader');
+    loader.classList.add('hidden');
+    setTimeout(() => loader.remove(), 400);
+
+    /* Polling alertes */
+    setInterval(pollAlertes, 60_000);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>

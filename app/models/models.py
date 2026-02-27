@@ -2,31 +2,51 @@
 models.py — 9 tables SQLAlchemy — Veille Marché Dang
 Commune de Ngaoundéré 3ème — Région Adamaoua
 
-FLUX DE DONNÉES :
-  Backoffice web (saisie) → API → Base de données → App mobile (lecture/alertes)
+═══════════════════════════════════════════════════════════════
+LOGIQUE MÉTIER DES CHIFFRES D'AFFAIRES
+═══════════════════════════════════════════════════════════════
 
-  1. Un agent enregistre les Commercants et Activites dans le backoffice.
-  2. Après chaque tournée terrain (fiche papier), il saisit les Sessions.
-  3. L'API calcule les Indicateurs et génère les Alertes automatiquement.
-  4. L'app mobile Flutter lit tout en GET, suit des activités, sauvegarde des recherches.
+  SESSION JOURNALIÈRE (grain de base)
+  ─────────────────────────────────────────────────────────────
+  • Un commerçant → 1 session MAX par jour (UNIQUE commercant_id + date_session).
+  • Une session appartient à UNE activité (activite_id) — celle exercée CE jour.
+  • recette_journaliere : FCFA déclarés pour ce commerçant ce jour-là.
+    → NULL si statut ≠ ouvert.
 
-TABLES :
-  1  CategorieActivite     — familles de commerce (Alimentation, Textile, Restauration…)
-  2  Activite              — types précis de commerce avec mots-clés indexés
-  3  ZoneMarche            — secteurs géographiques du marché de Dang
-  4  Commercant            — sédentaires / ambulants / semi-sédentaires
-  5  SessionJournaliere    — recette déclarée par commerçant et par jour (cœur collecte)
-  6  IndicateurActivite    — CA + tendances précalculés par activité et période
-  7  Alerte                — événements détectés automatiquement
-  8  SuiviActivite         — abonnement mobile à une activité (token_fcm)
-  9  RechercheSauvegardee  — veille active sur mots-clés depuis mobile
+  CA D'UNE ACTIVITÉ (Activite.ca_total)
+  ─────────────────────────────────────────────────────────────
+  • = SUM(recette_journaliere) de toutes les sessions ouvertes
+    dont activite_id = cet activite.
+  • Une activité peut avoir N sessions par jour : un commerçant différent
+    par session. Chaque commerçant lié à cette activité contribue
+    quotidiennement avec SA propre session.
+  • Calculé DYNAMIQUEMENT par hybrid_property — jamais stocké en colonne.
+    → Pas de dénormalisation, pas de désynchronisation possible.
+
+  CA PAR CATÉGORIE (calcul_service)
+  ─────────────────────────────────────────────────────────────
+  • = SUM des ca_total de toutes les activités d'une CategorieActivite.
+  • Aucune colonne en base — calculé à la demande dans calcul_service.ca_categorie().
+
+  CA GLOBAL DU MARCHÉ (calcul_service)
+  ─────────────────────────────────────────────────────────────
+  • = SUM(recette_journaliere) de TOUTES les sessions ouvertes, toutes activités.
+  • Calculé dans calcul_service.ca_global() — aucune colonne.
+
+  INDICATEURS PRÉ-CALCULÉS (IndicateurActivite)
+  ─────────────────────────────────────────────────────────────
+  • ca_total par période (jour / semaine / mois) — UPSERT chaque nuit.
+  • Permet le graphique d'évolution et le top-activités sans requêtes lourdes.
+
+═══════════════════════════════════════════════════════════════
 """
 
 import enum
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean,
-    Date, DateTime, Text, Enum, ForeignKey, UniqueConstraint,
+    Date, DateTime, Text, Enum, ForeignKey, UniqueConstraint, select,
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -80,7 +100,9 @@ class CategorieActivite(Base):
     """
     Référentiel des grandes familles de commerce.
     Ex: Alimentation, Textile, Restauration, Téléphonie, Artisanat.
-    Administré dans le backoffice. Sert de filtre sur l'app mobile.
+
+    Le CA par catégorie est calculé à la demande (calcul_service.ca_categorie)
+    comme la somme des ca_total de toutes les activités de la catégorie.
     """
     __tablename__ = "categories_activite"
 
@@ -103,14 +125,21 @@ class Activite(Base):
     Type précis de commerce exercé sur le marché de Dang.
     Ex: 'Vente de maïs en gros', 'Restauration beignets/café', 'Recharge téléphone'.
 
-    Créée UNIQUEMENT dans le backoffice web par un agent.
-    → Déclenche immédiatement :
-        - alerte type=nouvelle_activite
-        - push notifications aux abonnés + aux recherches sauvegardées qui matchent
+    ── CA de l'activité ──────────────────────────────────────────────────────
+    Il n'y a PAS de colonne chiffre_affaire en base.
 
-    mots_cles : chaîne libre indexée pour le moteur de recherche GET /recherche?q=
-    date_premiere_observation : date réelle de la 1ère observation terrain
-      (peut précéder created_at si l'agent saisit avec délai).
+    Pourquoi : une activité peut avoir N commerçants, chacun avec sa propre
+    session journalière. Stocker une somme dans la ligne Activite créerait
+    une dénormalisation — il faudrait la mettre à jour à chaque INSERT,
+    UPDATE ou DELETE de session, et elle serait désynchronisée dès la
+    moindre correction de saisie.
+
+    À la place :
+      • Activite.ca_total (hybrid_property) — somme en Python si les sessions
+        sont déjà chargées en mémoire (joinedload), ou sous-requête SQL sinon.
+      • calcul_service.ca_periode(db, activite_id, d0, d1) — pour une période.
+      • IndicateurActivite.ca_total — pré-calculé chaque nuit pour les dashboards.
+    ──────────────────────────────────────────────────────────────────────────
     """
     __tablename__ = "activites"
 
@@ -123,11 +152,43 @@ class Activite(Base):
     created_at                = Column(DateTime(timezone=True), server_default=func.now())
 
     categorie   = relationship("CategorieActivite",  back_populates="activites")
+    sessions    = relationship("SessionJournaliere", back_populates="activite")
+    indicateurs = relationship("IndicateurActivite", back_populates="activite")
     commercants = relationship("Commercant",          back_populates="activite")
-    sessions    = relationship("SessionJournaliere",  back_populates="activite")
-    indicateurs = relationship("IndicateurActivite",  back_populates="activite")
-    alertes     = relationship("Alerte",              back_populates="activite")
-    suivis      = relationship("SuiviActivite",       back_populates="activite")
+    alertes     = relationship("Alerte",             back_populates="activite")
+    suivis      = relationship("SuiviActivite",      back_populates="activite")
+
+    # ── CA dynamique ──────────────────────────────────────────────
+
+    @hybrid_property
+    def ca_total(self) -> float:
+        """
+        CA cumulé toutes périodes : SUM des recette_journaliere des sessions
+        ouvertes liées à cette activité.
+
+        Utilisé quand l'objet est déjà chargé avec joinedload(Activite.sessions).
+        Pour des agrégats en masse, utiliser calcul_service.ca_periode().
+        """
+        return sum(
+            s.recette_journaliere
+            for s in self.sessions
+            if s.statut == StatutSessionEnum.OUVERT
+            and s.recette_journaliere is not None
+        )
+
+    @ca_total.expression
+    def ca_total(cls):
+        """
+        Variante SQL — utilisable dans .filter() et ORDER BY sans charger les sessions.
+        Ex : db.query(Activite).order_by(Activite.ca_total.desc()).all()
+        """
+        return (
+            select(func.coalesce(func.sum(SessionJournaliere.recette_journaliere), 0.0))
+            .where(SessionJournaliere.activite_id == cls.id)
+            .where(SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+            .correlate(cls)
+            .scalar_subquery()
+        )
 
 
 # ═══════════════════════════════════════
@@ -175,8 +236,8 @@ class Commercant(Base):
 
     zones_circuit : JSON list des zones parcourues habituellement par un ambulant.
         Ex: '["Secteur A", "Bord de route", "Zone nord"]'
-    point_depart : adresse/description du dépôt ou domicile de départ de l'ambulant.
-    date_premiere_obs : date réelle du 1er relevé terrain (ancienneté du commerçant).
+    point_depart  : description du dépôt ou domicile de départ de l'ambulant.
+    date_premiere_obs : date réelle du 1er relevé terrain.
     """
     __tablename__ = "commercants"
 
@@ -194,6 +255,7 @@ class Commercant(Base):
     notes              = Column(Text,        nullable=True)
     created_at         = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Une seule déclaration de chaque relation — pas de doublon
     activite        = relationship("Activite",           back_populates="commercants")
     zone_principale = relationship("ZoneMarche",         back_populates="commercants_principaux")
     sessions        = relationship("SessionJournaliere", back_populates="commercant")
@@ -208,39 +270,43 @@ class SessionJournaliere(Base):
     """
     Observation quotidienne d'un commerçant — cœur de la collecte.
 
-    Saisie dans le backoffice web par un agent APRÈS sa tournée terrain.
-    Le protocole : agent descend avec fiche papier structurée → rentre au bureau
-    → saisit les fiches une à une dans le formulaire web.
+    ── Règle 1 session par commerçant par jour ──────────────────────────────
+    UNIQUE(commercant_id, date_session) : un commerçant ne peut avoir qu'une
+    session déclarée par jour. Cela représente sa journée complète de travail.
 
-    recette_journaliere : montant total en FCFA déclaré pour la journée.
-        - Sédentaire : recette de l'emplacement fixe.
-        - Ambulant   : recette totale de toute la tournée (plusieurs zones).
-        NULL si statut ≠ ouvert (commerçant absent/fermé).
+    ── Plusieurs sessions par activité par jour ─────────────────────────────
+    En revanche, une ACTIVITÉ peut totaliser N sessions le même jour, car
+    elle regroupe plusieurs commerçants qui l'exercent en parallèle.
+    Ex: 'Vente de maïs en gros' le 15/07 peut avoir 4 sessions (4 commerçants),
+    chacune avec sa propre recette_journaliere. Le CA de l'activité ce jour-là
+    est la somme de ces 4 recettes.
 
-    activite_id : activité exercée CE JOUR — peut différer de l'activité principale
-        (utile pour les semi-sédentaires qui changent d'activité selon les jours).
+    ── activite_id vs activite principale du commerçant ─────────────────────
+    activite_id ici = activité exercée CE JOUR, pas nécessairement l'activité
+    principale du commerçant. Un semi-sédentaire peut changer d'activité
+    selon le jour. C'est CE activite_id qui est agrégé dans les indicateurs.
 
-    zone_observation_id : zone où l'agent a croisé le commerçant ce jour.
-        Obligatoire pour les ambulants. Pour sédentaires : déduit de zone_principale.
+    ── recette_journaliere ──────────────────────────────────────────────────
+    Montant total FCFA déclaré pour la JOURNÉE ENTIÈRE de CE commerçant.
+    NULL si statut ≠ ouvert (absent/fermé).
+    Sédentaire : recette de l'emplacement fixe.
+    Ambulant    : recette totale de toute la tournée (plusieurs zones).
 
     score_fiabilite :
         0.90 → agent avec fiche papier vérifiée (source principale)
         0.65 → déclaration non vérifiée / estimation
         0.40 → estimation sans fiche
-
-    CONTRAINTE UNIQUE (commercant_id, date_session) : un seul relevé par jour par
-        commerçant. Idempotent — re-soumettre la même fiche retourne HTTP 409.
     """
     __tablename__ = "sessions_journalieres"
 
     id                  = Column(Integer, primary_key=True, index=True)
-    commercant_id       = Column(Integer, ForeignKey("commercants.id"),   nullable=False)
-    activite_id         = Column(Integer, ForeignKey("activites.id"),     nullable=False)
-    zone_observation_id = Column(Integer, ForeignKey("zones_marche.id"),  nullable=True)
+    commercant_id       = Column(Integer, ForeignKey("commercants.id"),  nullable=False)
+    activite_id         = Column(Integer, ForeignKey("activites.id"),    nullable=False)
+    zone_observation_id = Column(Integer, ForeignKey("zones_marche.id"), nullable=True)
     date_session        = Column(Date,    nullable=False, index=True)
     statut              = Column(Enum(StatutSessionEnum), nullable=False,
                                  default=StatutSessionEnum.OUVERT)
-    recette_journaliere = Column(Float,   nullable=True)   # FCFA
+    recette_journaliere = Column(Float,   nullable=True)   # FCFA — NULL si absent/fermé
     score_fiabilite     = Column(Float,   nullable=False, default=0.90)
     notes               = Column(Text,    nullable=True)
     created_at          = Column(DateTime(timezone=True), server_default=func.now())
@@ -264,13 +330,15 @@ class IndicateurActivite(Base):
     Agrégats précalculés par activité et par période.
     Recalculés chaque nuit (cron POST /indicateurs/recalculer) ou à la demande.
 
-    ca_total        : SUM(recette_journaliere) des sessions ouvertes sur la période
-    nb_commercants  : COUNT DISTINCT commerçants avec au moins 1 session ouverte
-    taux_presence   : moyenne des taux de présence individuels (jours_ouverts / jours_observés)
-    tendance        : HAUSSE / BAISSE / STABLE comparé à la période précédente
-    ecart_pct       : (ca_N - ca_N1) / ca_N1 × 100
+    ca_total     : SUM(recette_journaliere) des sessions ouvertes de CETTE activité
+                   sur la période — toutes les sessions de tous les commerçants
+                   qui ont exercé cette activité entre date_debut et date_fin.
+    nb_commercants : COUNT DISTINCT(commercant_id) actifs sur la période
+    taux_presence  : moyenne des taux individuels (jours_ouverts / jours_observés)
+    tendance       : comparaison avec la période précédente
+    ecart_pct      : (ca_N - ca_N1) / ca_N1 × 100
 
-    UNIQUE(activite_id, periode, date_debut) : idempotent — recalculer ne crée pas de doublons.
+    UNIQUE(activite_id, periode, date_debut) → UPSERT idempotent.
     """
     __tablename__ = "indicateurs_activite"
 
@@ -284,7 +352,8 @@ class IndicateurActivite(Base):
     taux_presence_moy = Column(Float,   nullable=True)
     tendance          = Column(Enum(TendanceEnum), nullable=True)
     ecart_pct         = Column(Float,   nullable=True)
-    calculated_at     = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    calculated_at     = Column(DateTime(timezone=True), server_default=func.now(),
+                               onupdate=func.now())
 
     __table_args__ = (
         UniqueConstraint("activite_id", "periode", "date_debut",
@@ -300,19 +369,18 @@ class IndicateurActivite(Base):
 
 class Alerte(Base):
     """
-    Journal des événements détectés automatiquement par alerte_service.
-    Jamais créée manuellement — toujours déclenchée par le code.
+    Événement métier détecté automatiquement par alerte_service.
 
-    TYPE → DÉCLENCHEUR :
-        nouvelle_activite  → immédiatement après POST /activites/
-        declin_activite    → CA en baisse 3 semaines consécutives (≥ SEUIL_DECLIN_PCT)
-        commercant_inactif → sédentaire absent > SEUIL_INACTIF_JOURS jours
-        ambulant_disparu   → ambulant absent > SEUIL_AMBULANT_DISPARU jours
-        pic_ca             → CA journalier > SEUIL_PIC_MULTIPLICATEUR × moyenne
-        mot_cle_match      → nouvelle activité correspond à une recherche sauvegardée
+    type_alerte   : catégorie de l'événement (voir TypeAlerteEnum).
+    activite_id   : nullable — présent pour les alertes sur une activité
+                    (nouvelle_activite, declin_activite, pic_ca, mot_cle_match).
+    commercant_id : nullable — présent pour les alertes sur un commerçant
+                    (commercant_inactif, ambulant_disparu).
+    Une alerte peut être liée aux deux (ex : commercant_inactif lie aussi
+    l'activité du commerçant pour cibler les push notifications).
 
-    lue          : passé à True par PATCH /alertes/{id}/lue depuis l'app mobile.
-    push_envoyee : True quand Firebase a confirmé l'envoi de la notification.
+    lue          : False → badge rouge dans l'app mobile.
+    push_envoyee : True si Firebase a été appelé avec succès.
     """
     __tablename__ = "alertes"
 
@@ -320,11 +388,11 @@ class Alerte(Base):
     type_alerte   = Column(Enum(TypeAlerteEnum),   nullable=False, index=True)
     activite_id   = Column(Integer, ForeignKey("activites.id"),   nullable=True)
     commercant_id = Column(Integer, ForeignKey("commercants.id"), nullable=True)
-    niveau        = Column(Enum(NiveauAlerteEnum), nullable=False, default=NiveauAlerteEnum.INFO)
+    niveau        = Column(Enum(NiveauAlerteEnum), nullable=False)
     message       = Column(Text,    nullable=False)
     lue           = Column(Boolean, nullable=False, default=False)
     push_envoyee  = Column(Boolean, nullable=False, default=False)
-    created_at    = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
     activite   = relationship("Activite",   back_populates="alertes")
     commercant = relationship("Commercant", back_populates="alertes")
@@ -338,15 +406,11 @@ class SuiviActivite(Base):
     """
     Abonnement d'un appareil mobile Flutter à une activité spécifique.
 
-    Pas de compte utilisateur en phase 1 — identifié par token_fcm (Firebase device token).
-    Quand une alerte est créée pour activite_id, push_service envoie une notification
-    ciblée à tous les appareils ayant un SuiviActivite pour cette activité.
+    Identifié par token_fcm (Firebase device token) — pas de compte utilisateur.
+    Quand une alerte est créée pour activite_id, push_service notifie tous
+    les appareils ayant un SuiviActivite pour cette activité.
 
-    Cas d'usage : un décideur municipal veut être alerté spécifiquement si l'activité
-    'Vente de poisson fumé' est en déclin ou connaît un pic.
-
-    UNIQUE(token_fcm, activite_id) : un appareil ne peut pas s'abonner deux fois
-    à la même activité.
+    UNIQUE(token_fcm, activite_id) : pas de doublon.
     """
     __tablename__ = "suivis_activite"
 
@@ -370,15 +434,10 @@ class RechercheSauvegardee(Base):
     """
     Veille active sur mots-clés, enregistrée depuis l'application mobile.
 
-    Cas d'usage : un décideur tape "pharmacopée plantes" dans la recherche
-    et appuie sur 'Sauvegarder cette recherche'. Dès qu'une nouvelle activité
-    est créée dans le backoffice avec des mots-clés correspondants (intersection
-    de termes), il reçoit une push notification automatiquement.
+    Quand une Activite est créée avec des mots-clés qui correspondent,
+    push_service notifie automatiquement les appareils abonnés.
 
-    mots_cles         : chaîne brute saisie par l'utilisateur mobile.
-    derniere_alerte_at: horodatage du dernier match — évite les doublons si
-                        l'activité est modifiée plusieurs fois le même jour.
-
+    derniere_alerte_at : horodatage du dernier match — évite les doublons.
     UNIQUE(token_fcm, mots_cles) : pas de doublon pour le même appareil.
     """
     __tablename__ = "recherches_sauvegardees"
