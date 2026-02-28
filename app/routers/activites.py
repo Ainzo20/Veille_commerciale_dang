@@ -105,16 +105,18 @@ def get_detail(aid: int, db: Session = Depends(get_db)):
     ca_mois    = calcul_service.ca_periode(db, aid, d_mois0, d_mois1) or 0.0
 
     # ── Sessions ─────────────────────────────────────────────────
+    # Sessions FERMÉES = sessions ayant contribué au CA (recette déclarée)
+    # Les sessions ouvertes en cours ne sont pas encore comptabilisées
     nb_sessions_total = (
         db.query(func.count(SessionJournaliere.id))
         .filter(SessionJournaliere.activite_id == aid,
-                SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+                SessionJournaliere.statut == StatutSessionEnum.FERME)
         .scalar() or 0
     )
     nb_sessions_30j = (
         db.query(func.count(SessionJournaliere.id))
         .filter(SessionJournaliere.activite_id == aid,
-                SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+                SessionJournaliere.statut == StatutSessionEnum.FERME,
                 SessionJournaliere.date_session >= d30)
         .scalar() or 0
     )
@@ -122,10 +124,12 @@ def get_detail(aid: int, db: Session = Depends(get_db)):
     # ── Commerçants actifs sur cette activité ────────────────────
     # Un commerçant est "actif" sur cette activité s'il a au moins
     # une session ouverte avec cet activite_id.
+    # Commerçants ayant au moins une session FERMÉE sur cette activité
+    # (i.e. ayant réellement contribué au CA)
     commercants_ids_rows = (
         db.query(func.distinct(SessionJournaliere.commercant_id))
         .filter(SessionJournaliere.activite_id == aid,
-                SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+                SessionJournaliere.statut == StatutSessionEnum.FERME)
         .all()
     )
     commercants_ids = [r[0] for r in commercants_ids_rows]
@@ -140,30 +144,31 @@ def get_detail(aid: int, db: Session = Depends(get_db)):
         if not com:
             continue
 
-        # Nombre de sessions ouvertes de CE commerçant SUR CETTE activité
+        # Nombre de sessions FERMÉES de CE commerçant SUR CETTE activité
         nb_ses = (
             db.query(func.count(SessionJournaliere.id))
             .filter(SessionJournaliere.commercant_id == cid,
                     SessionJournaliere.activite_id   == aid,
-                    SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+                    SessionJournaliere.statut == StatutSessionEnum.FERME)
             .scalar() or 0
         )
 
-        # CA total de CE commerçant SUR CETTE activité
+        # CA total de CE commerçant SUR CETTE activité (sessions FERMÉES uniquement)
         ca_com = (
             db.query(func.coalesce(func.sum(SessionJournaliere.recette_journaliere), 0.0))
             .filter(SessionJournaliere.commercant_id == cid,
                     SessionJournaliere.activite_id   == aid,
-                    SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+                    SessionJournaliere.statut == StatutSessionEnum.FERME,
+                    SessionJournaliere.recette_journaliere.isnot(None))
             .scalar() or 0.0
         )
 
-        # Dernière session ouverte de CE commerçant SUR CETTE activité
+        # Dernière session FERMÉE de CE commerçant SUR CETTE activité
         derniere = (
             db.query(func.max(SessionJournaliere.date_session))
             .filter(SessionJournaliere.commercant_id == cid,
                     SessionJournaliere.activite_id   == aid,
-                    SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+                    SessionJournaliere.statut == StatutSessionEnum.FERME)
             .scalar()
         )
 

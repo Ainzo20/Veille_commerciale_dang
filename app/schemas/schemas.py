@@ -8,7 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.models import (
-    TypePresenceEnum, StatutSessionEnum, PeriodeEnum,
+    TypePresenceEnum, StatutSessionEnum, ScoreSourceEnum, PeriodeEnum,
     TendanceEnum, TypeAlerteEnum, NiveauAlerteEnum,
 )
 
@@ -140,26 +140,58 @@ class CommercantOut(OrmBase):
 
 class SessionCreate(OrmBase):
     """
-    Corps du POST /sessions/.
+    Corps du POST /sessions/ — OUVERTURE ou saisie a posteriori.
 
-    activite_id est OPTIONNEL :
-      - Si absent → le router le déduit automatiquement de
-        Commercant.activite_id (cas courant, 95% des saisies).
-      - Si fourni → permet à un semi-sédentaire de déclarer une
-        activité différente de son activité principale ce jour-là.
+    ═══════════════════════════════════════════════════════════════
+    FLUX NORMAL (deux étapes)
+    ═══════════════════════════════════════════════════════════════
 
-    La recette_journaliere est le TOTAL FCFA de la journée entière
-    de ce commerçant (bilan global, pas une transaction unitaire).
+    ÉTAPE 1 — Matin : ouvrir (pas de recette)
+      POST /sessions/
+      { "commercant_id": 1, "activite_id": 3, "date_session": "2026-03-05" }
+      → statut = ouvert, recette = null
+      → NE contribue PAS au CA
 
-    Exemples de saisie :
-      Lundi   → {commercant_id:1, date_session:"2025-07-14", recette_journaliere:15000}
-      Mardi   → {commercant_id:1, date_session:"2025-07-15", recette_journaliere:12000}
-      Mercredi→ {commercant_id:1, date_session:"2025-07-16", recette_journaliere:18000}
-    Ces 3 sessions génèrent un CA de 45 000 FCFA pour l'activité sur la semaine.
+    ÉTAPE 2 — Soir : fermer avec recette
+      PATCH /sessions/{id}
+      { "statut": "ferme", "recette_journaliere": 15000, "score_fiabilite": 0.90 }
+      → CA mis à jour immédiatement
+
+    ═══════════════════════════════════════════════════════════════
+    SAISIE A POSTERIORI (une seule requête)
+    ═══════════════════════════════════════════════════════════════
+    { "commercant_id": 1, "activite_id": 3, "date_session": "2026-03-01",
+      "statut": "ferme", "recette_journaliere": 15000 }
+
+    ═══════════════════════════════════════════════════════════════
+    PLUSIEURS SESSIONS PAR JOUR — UN COMMERÇANT / PLUSIEURS ACTIVITÉS
+    ═══════════════════════════════════════════════════════════════
+    Un commerçant peut avoir plusieurs sessions le même jour
+    à condition qu'elles concernent des activités différentes :
+      Session 1 : (commercant=1, activite=1, date=2026-03-05) → maïs
+      Session 2 : (commercant=1, activite=2, date=2026-03-05) → huile
+    ✅ 2 sessions autorisées.
+    ❌ (commercant=1, activite=1, date=2026-03-05) × 2 = ERREUR 409.
+
+    ═══════════════════════════════════════════════════════════════
+    SCORE DE FIABILITÉ
+    ═══════════════════════════════════════════════════════════════
+    Utiliser ScoreSourceEnum pour les valeurs standards :
+      1.00 ticket_caisse    → reçu ou ticket scanné
+      0.90 fiche_agent      → fiche papier vérifiée (défaut)
+      0.85 carnet_ventes    → carnet du commerçant
+      0.70 declaration_face → déclaration directe
+      0.60 declaration_tel  → déclaration téléphonique
+      0.50 declaration_tiers→ déclaration par un tiers
+      0.40 estimation_agent → observation visuelle
+      0.25 estimation_passe → basé sur historique
+      0.10 estimation_faible→ très incertaine
+
+    Valeur composite possible : saisir la moyenne pondérée si
+    plusieurs sources ont été utilisées pour la même session.
     """
     commercant_id:       int
-    # activite_id optionnel : déduit de commercant.activite_id si absent
-    activite_id:         Optional[int]     = None
+    activite_id:         Optional[int]     = None   # déduit de commercant.activite_id si absent
     zone_observation_id: Optional[int]     = None
     date_session:        date
     statut:              StatutSessionEnum = StatutSessionEnum.OUVERT
@@ -169,15 +201,24 @@ class SessionCreate(OrmBase):
 
     @model_validator(mode="after")
     def check_recette(self) -> "SessionCreate":
-        if self.statut == StatutSessionEnum.OUVERT and self.recette_journaliere is None:
+        # Ouverture normale → pas de recette attendue
+        if self.statut == StatutSessionEnum.OUVERT and self.recette_journaliere is not None:
             raise ValueError(
-                "recette_journaliere est obligatoire quand statut=ouvert. "
-                "Saisissez le total FCFA déclaré par le commerçant pour la journée."
+                "Ne pas envoyer recette_journaliere à l'ouverture. "
+                "La recette se saisit au moment de la fermeture (PATCH /{id})."
             )
-        if self.statut != StatutSessionEnum.OUVERT and self.recette_journaliere is not None:
+        # Fermeture directe (a posteriori) → recette obligatoire
+        if self.statut == StatutSessionEnum.FERME and self.recette_journaliere is None:
             raise ValueError(
-                "recette_journaliere doit être null si le commerçant est absent ou fermé."
+                "recette_journaliere obligatoire pour statut=ferme. "
+                "Si recette inconnue, utiliser statut=ouvert puis PATCH plus tard."
             )
+        # Absence → pas de recette
+        if self.statut not in (StatutSessionEnum.OUVERT, StatutSessionEnum.FERME):
+            if self.recette_journaliere is not None:
+                raise ValueError(
+                    "recette_journaliere doit être null pour une session d'absence."
+                )
         return self
 
 class SessionUpdate(OrmBase):
@@ -235,6 +276,47 @@ class AlerteOut(OrmBase):
 
 class AlertePatchLue(OrmBase):
     lue: bool = True
+
+
+# ── SCORE FIABILITÉ ───────────────────────────────────────────────
+
+class ScoreSourceOut(OrmBase):
+    """Valeurs standards de score_fiabilite pour affichage dans l'UI."""
+    valeur:      float
+    cle:         str
+    label:       str
+    description: str
+
+# Catalogue exposable via GET /sessions/scores
+SCORES_FIABILITE = [
+    ScoreSourceOut(valeur=1.00, cle="ticket_caisse",
+                   label="Ticket de caisse",
+                   description="Reçu ou ticket scanné — source la plus fiable"),
+    ScoreSourceOut(valeur=0.90, cle="fiche_agent",
+                   label="Fiche agent",
+                   description="Fiche papier vérifiée physiquement par l'agent"),
+    ScoreSourceOut(valeur=0.85, cle="carnet_ventes",
+                   label="Carnet de ventes",
+                   description="Carnet tenu par le commerçant lui-même"),
+    ScoreSourceOut(valeur=0.70, cle="declaration_face",
+                   label="Déclaration directe",
+                   description="Déclaration verbale face à face"),
+    ScoreSourceOut(valeur=0.60, cle="declaration_tel",
+                   label="Déclaration téléphonique",
+                   description="Déclaration par téléphone"),
+    ScoreSourceOut(valeur=0.50, cle="declaration_tiers",
+                   label="Déclaration par un tiers",
+                   description="Information transmise par un voisin ou associé"),
+    ScoreSourceOut(valeur=0.40, cle="estimation_agent",
+                   label="Estimation agent",
+                   description="Observation visuelle de l'agent sur le terrain"),
+    ScoreSourceOut(valeur=0.25, cle="estimation_passe",
+                   label="Estimation historique",
+                   description="Extrapolé depuis des données passées similaires"),
+    ScoreSourceOut(valeur=0.10, cle="estimation_faible",
+                   label="Estimation incertaine",
+                   description="Très partielle ou peu fiable"),
+]
 
 
 # ── SUIVI ACTIVITE (mobile) ───────────────────────────────────────

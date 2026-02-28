@@ -82,6 +82,36 @@ class StatutSessionEnum(str, enum.Enum):
     ABSENT_APPROVISIONNEMENT = "absent_approvisionnement"
     INCONNU                  = "inconnu"
 
+class ScoreSourceEnum(float, enum.Enum):
+    """
+    Valeurs prédéfinies de score_fiabilite selon la source et la qualité.
+    L'agent choisit la valeur correspondant à sa source au moment de la saisie.
+
+    Source primaire (vérification physique) :
+        TICKET_CAISSE    = 1.00  → reçu ou ticket scanné
+        FICHE_AGENT      = 0.90  → fiche papier vérifiée sur place
+        CARNET_VENTES    = 0.85  → carnet tenu par le commerçant
+
+    Source secondaire (déclaratif) :
+        DECLARATION_FACE = 0.70  → déclaration directe face à face
+        DECLARATION_TEL  = 0.60  → déclaration par téléphone
+        DECLARATION_TIERS= 0.50  → déclaration par un tiers
+
+    Estimation (non vérifiable) :
+        ESTIMATION_AGENT = 0.40  → observation visuelle de l'agent
+        ESTIMATION_PASSE = 0.25  → basé sur données historiques
+        ESTIMATION_FAIBLE= 0.10  → très incertaine ou partielle
+    """
+    TICKET_CAISSE     = 1.00
+    FICHE_AGENT       = 0.90
+    CARNET_VENTES     = 0.85
+    DECLARATION_FACE  = 0.70
+    DECLARATION_TEL   = 0.60
+    DECLARATION_TIERS = 0.50
+    ESTIMATION_AGENT  = 0.40
+    ESTIMATION_PASSE  = 0.25
+    ESTIMATION_FAIBLE = 0.10
+
 class PeriodeEnum(str, enum.Enum):
     JOUR    = "jour"
     SEMAINE = "semaine"
@@ -162,7 +192,7 @@ class Activite(Base):
         return sum(
             s.recette_journaliere
             for s in self.sessions
-            if s.statut == StatutSessionEnum.OUVERT
+            if s.statut == StatutSessionEnum.FERME
             and s.recette_journaliere is not None
         )
 
@@ -172,7 +202,7 @@ class Activite(Base):
         return (
             select(func.coalesce(func.sum(SessionJournaliere.recette_journaliere), 0.0))
             .where(SessionJournaliere.activite_id == cls.id)
-            .where(SessionJournaliere.statut == StatutSessionEnum.OUVERT)
+            .where(SessionJournaliere.statut == StatutSessionEnum.FERME)
             .correlate(cls)
             .scalar_subquery()
         )
@@ -240,43 +270,64 @@ class Commercant(Base):
 
 class SessionJournaliere(Base):
     """
-    Bilan quotidien d'UN commerçant — grain de base de toute la collecte.
+    Session journalière d'UN commerçant pour UNE activité — grain de base.
 
     ═══════════════════════════════════════════════════════════════
-    RÈGLE : 1 SESSION PAR COMMERÇANT PAR JOUR
+    FLUX MÉTIER : OUVERTURE → FERMETURE
     ═══════════════════════════════════════════════════════════════
-    UNIQUE(commercant_id, date_session).
 
-    L'agent passe en tournée, remplit une fiche papier par commerçant.
-    Le soir, il rentre et saisit le bilan de la journée pour chaque
-    commerçant : "Mama Bawa a fait 15 000 FCFA aujourd'hui".
+    ÉTAPE 1 — Matin : OUVRIR sans recette
+      POST /sessions/  { commercant_id, activite_id, date_session }
+      → statut = ouvert, recette_journaliere = NULL
+      → NE contribue PAS encore au CA
 
-    recette_journaliere est le TOTAL de la journée entière de ce
-    commerçant. Pas une transaction, un bilan global.
-      → Lundi   : session → 15 000 FCFA
-      → Mardi   : session → 12 000 FCFA   ← nouvelle session, nouveau jour
-      → Mercredi: session → 18 000 FCFA   ← nouvelle session, nouveau jour
-    Le CA de l'activité = somme de ces sessions sur la période.
+    ÉTAPE 2 — Soir : FERMER avec la recette
+      PATCH /sessions/{id}  { statut: "ferme", recette_journaliere: 15000 }
+      → Recette enregistrée → CONTRIBUE au CA dès ce PATCH
+      → Indicateurs recalculés automatiquement
 
     ═══════════════════════════════════════════════════════════════
-    ACTIVITE_ID — dérivé automatiquement, rarement à surcharger
+    UN COMMERÇANT PEUT AVOIR PLUSIEURS SESSIONS PAR JOUR
     ═══════════════════════════════════════════════════════════════
-    À la création (POST /sessions/), si activite_id n'est pas fourni,
-    le router le copie depuis Commercant.activite_id automatiquement.
-    Un semi-sédentaire qui change d'activité ce jour-là peut fournir
-    un activite_id différent explicitement.
+    Contrairement à l'ancienne règle UNIQUE(commercant_id, date_session),
+    un commerçant peut exercer PLUSIEURS activités le même jour :
+      Ex : Mama Bawa vend du maïs le matin (activite_id=1)
+           et de l'huile l'après-midi (activite_id=2) le même jour.
+      → 2 sessions distinctes : (commercant_id=1, date_session=..., activite_id=1)
+                                  (commercant_id=1, date_session=..., activite_id=2)
+
+    La contrainte unique est donc sur (commercant_id, activite_id, date_session) :
+    un commerçant ne peut exercer UNE MÊME activité qu'une seule fois par jour.
 
     ═══════════════════════════════════════════════════════════════
-    STATUT ET RECETTE
+    ACTIVITE_ID
     ═══════════════════════════════════════════════════════════════
-    statut=ouvert   → recette_journaliere obligatoire (> 0)
-    statut≠ouvert   → recette_journaliere NULL
-    (absent maladie, absent approvisionnement, fermé, inconnu)
+    Toujours obligatoire. Si non fourni au POST → déduit de
+    Commercant.activite_id (activité principale).
 
-    score_fiabilite :
-        0.90 → fiche papier vérifiée par l'agent (source principale)
-        0.65 → déclaration orale non vérifiée
-        0.40 → estimation sans fiche
+    ═══════════════════════════════════════════════════════════════
+    SCORE DE FIABILITÉ — calculé selon la source et la qualité
+    ═══════════════════════════════════════════════════════════════
+    La valeur est choisie par l'agent selon la source de la donnée :
+
+    Source primaire (données vérifiées) :
+        1.00 → Ticket de caisse / reçu scanné
+        0.90 → Fiche papier agent + vérification physique
+        0.85 → Carnet de ventes tenu par le commerçant
+
+    Source secondaire (données déclaratives) :
+        0.70 → Déclaration directe du commerçant (face à face)
+        0.60 → Déclaration par téléphone
+        0.50 → Déclaration d'un tiers (voisin, associé)
+
+    Estimation (données non vérifiables) :
+        0.40 → Estimation terrain par l'agent (observation visuelle)
+        0.25 → Estimation basée sur données passées
+        0.10 → Estimation très incertaine / partielle
+
+    Règle de calcul composite (si plusieurs sources sur la même journée) :
+        score_composite = moyenne_pondérée(scores) × facteur_fraîcheur
+        facteur_fraîcheur : 1.0 si saisi le jour même, -0.05 par jour de retard
     """
     __tablename__ = "sessions_journalieres"
 
@@ -293,8 +344,8 @@ class SessionJournaliere(Base):
     created_at          = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        UniqueConstraint("commercant_id", "date_session",
-                         name="uq_session_commercant_date"),
+        UniqueConstraint("commercant_id", "activite_id", "date_session",
+                         name="uq_session_commercant_activite_date"),
     )
 
     commercant       = relationship("Commercant",  back_populates="sessions")

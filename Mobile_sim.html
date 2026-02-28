@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Veille Marché Dang — App Mobile</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+/* ══ RESET ══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#e8e4dc;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:32px 16px 80px}
+
+/* ══ PHONE SHELL ══ */
+.phone-wrap{position:relative;width:390px;max-width:100%}
+.phone-shell{background:#1a1a1a;border-radius:50px;padding:12px;box-shadow:0 40px 80px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.06)}
+.phone-screen{border-radius:40px;overflow:hidden;background:#f5f0e8;height:800px;position:relative;display:flex;flex-direction:column}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:34px;background:#1a1a1a;border-radius:0 0 20px 20px;z-index:50;display:flex;align-items:center;justify-content:center;gap:6px}
+.notch-cam{width:10px;height:10px;border-radius:50%;background:#2a2a2a;border:1px solid #3a3a3a}
+
+/* ══ STATUS BAR ══ */
+.status-bar{height:44px;padding:0 22px;display:flex;align-items:flex-end;padding-bottom:6px;justify-content:space-between;font-size:11.5px;font-weight:600;color:#2c2620;flex-shrink:0;position:relative;z-index:10}
+.sb-time{font-size:14px;font-weight:700}
+.sb-icons{display:flex;align-items:center;gap:4px}
+
+/* ══ SCREEN CONTAINER ══ */
+.screens{flex:1;overflow:hidden;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;display:none;flex-direction:column;background:#f5f0e8;padding-bottom:80px}
+.screen.active{display:flex}
+.screen::-webkit-scrollbar{display:none}
+
+/* ══ BOTTOM NAV ══ */
+.bottom-nav{height:78px;background:rgba(250,247,242,.95);backdrop-filter:blur(20px);border-top:1px solid rgba(0,0,0,.06);display:flex;align-items:flex-start;justify-content:space-around;padding:10px 0 0;flex-shrink:0;position:relative;z-index:20}
+.bn-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer;transition:all .2s;padding:0 4px}
+.bn-ico{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:17px;transition:all .2s;color:#8a7d6e}
+.bn-label{font-size:10px;font-weight:600;color:#8a7d6e;letter-spacing:.2px;transition:color .2s}
+.bn-item.active .bn-ico{background:#2c2620;color:#d4a843}
+.bn-item.active .bn-label{color:#2c2620}
+.bn-badge{position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:#e05c3a;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* ══ COMMON COMPONENTS ══ */
+:root{
+  --cream:#f5f0e8;--sand:#e8e4dc;--brown:#2c2620;--gold:#d4a843;
+  --gold-bg:rgba(212,168,67,.1);--green:#3d9162;--green-bg:rgba(61,145,98,.1);
+  --red:#c0392b;--red-bg:rgba(192,57,43,.1);--amber:#d97706;--amber-bg:rgba(217,119,6,.1);
+  --blue:#2563eb;--blue-bg:rgba(37,99,235,.1);
+  --text:#2c2620;--text2:#6b5e52;--text3:#9a8a7a;--border:rgba(0,0,0,.08)
+}
+
+/* App header */
+.app-header{padding:18px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.app-header-title{font-size:22px;font-weight:800;color:var(--brown)}
+.app-header-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.header-btn{width:40px;height:40px;border-radius:14px;background:#fff;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.08);color:var(--text2);position:relative}
+
+/* Section header */
+.section-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 8px}
+.section-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.section-more{font-size:12px;font-weight:600;color:var(--gold);cursor:pointer}
+
+/* Cards */
+.card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.card-pad{padding:18px 20px}
+
+/* KPI strip */
+.kpi-strip{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 16px}
+.kpi-card{background:#fff;border-radius:16px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.kpi-ico{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px}
+.kpi-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:500;color:var(--brown)}
+.kpi-lbl{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* CA hero */
+.ca-hero{margin:0 20px 16px;background:var(--brown);border-radius:20px;padding:20px;color:#fff;position:relative;overflow:hidden}
+.ca-hero::after{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:rgba(212,168,67,.15);border-radius:50%}
+.ca-hero-label{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:6px}
+.ca-hero-amount{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:500;color:var(--gold);line-height:1}
+.ca-hero-fcfa{font-size:13px;color:rgba(255,255,255,.4);margin-top:3px}
+.ca-hero-trend{display:flex;align-items:center;gap:6px;margin-top:12px;font-size:12px;color:rgba(255,255,255,.7)}
+
+/* Bar chart inline */
+.bar-row{display:flex;align-items:center;gap:10px;padding:6px 20px}
+.bar-label{font-size:12.5px;color:var(--text2);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:6px;background:var(--sand);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s}
+.bar-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);width:65px;text-align:right;flex-shrink:0}
+
+/* Activity card */
+.act-card{background:#fff;border-radius:16px;margin:0 20px 10px;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.06);cursor:pointer;display:flex;align-items:center;gap:12px;transition:transform .15s}
+.act-card:active{transform:scale(.98)}
+.act-ico{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.act-info{flex:1;min-width:0}
+.act-name{font-size:14px;font-weight:700;color:var(--brown);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-sub{font-size:11.5px;color:var(--text3);margin-top:2px}
+.act-right{text-align:right;flex-shrink:0}
+.act-ca{font-family:'JetBrains Mono',monospace;font-size:13.5px;font-weight:500;color:var(--brown)}
+.act-trend-up{color:var(--green);font-size:11px;margin-top:2px}
+.act-trend-dn{color:var(--red);font-size:11px;margin-top:2px}
+
+/* Alert item */
+.alert-item{display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border)}
+.alert-dot{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:1px}
+.alert-dot.critique{background:var(--red-bg);color:var(--red)}
+.alert-dot.warning{background:var(--amber-bg);color:var(--amber)}
+.alert-dot.info{background:var(--blue-bg);color:var(--blue)}
+.alert-msg{font-size:13px;color:var(--brown);line-height:1.4}
+.alert-meta{font-size:11px;color:var(--text3);margin-top:4px;display:flex;gap:6px;align-items:center}
+.unread-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex-shrink:0}
+
+/* Search */
+.search-wrap{margin:6px 20px 16px;background:#fff;border-radius:16px;display:flex;align-items:center;gap:10px;padding:12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.search-wrap i{color:var(--text3);font-size:14px}
+.search-wrap input{flex:1;border:none;outline:none;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--brown);background:transparent}
+.search-wrap input::placeholder{color:var(--text3)}
+
+/* Chips */
+.chips{display:flex;gap:8px;padding:0 20px 14px;overflow-x:auto}
+.chips::-webkit-scrollbar{display:none}
+.chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s;background:#fff;color:var(--text2);border:1px solid var(--border)}
+.chip.active{background:var(--brown);color:#fff;border-color:var(--brown)}
+
+/* Detail panel */
+.detail-pane{position:absolute;inset:0;background:var(--cream);z-index:30;display:none;flex-direction:column;overflow-y:auto;padding-bottom:80px}
+.detail-pane.open{display:flex}
+.detail-pane::-webkit-scrollbar{display:none}
+.detail-back{display:flex;align-items:center;gap:10px;padding:14px 20px 8px;cursor:pointer}
+.detail-back i{color:var(--text3)}
+.detail-back span{font-size:13px;color:var(--text3);font-weight:500}
+.detail-hero{background:var(--brown);margin:0 20px;border-radius:20px;padding:20px;color:#fff}
+.detail-hero-name{font-size:18px;font-weight:800;color:#fff;margin-bottom:4px}
+.detail-hero-cat{font-size:12px;color:rgba(255,255,255,.5)}
+.detail-kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:16px 20px 0}
+.dkpi{background:#fff;border-radius:14px;padding:12px;text-align:center}
+.dkpi-v{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:500;color:var(--brown)}
+.dkpi-l{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
+.com-row-m{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border)}
+.com-avatar-m{width:36px;height:36px;border-radius:50%;background:var(--gold-bg);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--gold);flex-shrink:0}
+.com-name-m{font-size:13.5px;font-weight:600;color:var(--brown)}
+.com-sub-m{font-size:11px;color:var(--text3);margin-top:2px}
+.com-ca-m{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);font-weight:500;text-align:right}
+.sess-row-m{display:flex;align-items:center;gap:8px;padding:9px 20px;border-bottom:1px solid var(--border)}
+.sess-date-m{font-size:12px;font-weight:600;color:var(--text2);width:80px;flex-shrink:0}
+.sess-who-m{font-size:12px;color:var(--text3);flex:1}
+.sess-amt-m{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500}
+
+/* Badge */
+.badge-m{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:10.5px;font-weight:600}
+.bm-green{background:var(--green-bg);color:var(--green)}
+.bm-red{background:var(--red-bg);color:var(--red)}
+.bm-gold{background:var(--gold-bg);color:var(--amber)}
+.bm-gray{background:var(--sand);color:var(--text3)}
+
+/* Zones map mock */
+.zone-legend{display:flex;gap:12px;padding:12px 20px;flex-wrap:wrap}
+.zl-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.zl-dot{width:10px;height:10px;border-radius:50%}
+.zone-list-item{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border)}
+.zone-ico-m{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.zone-name-m{font-size:13.5px;font-weight:600;color:var(--brown)}
+.zone-meta-m{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Fab */
+.fab{position:fixed;bottom:96px;right:22px;width:52px;height:52px;border-radius:18px;background:var(--brown);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gold);box-shadow:0 4px 16px rgba(0,0,0,.25);cursor:pointer;z-index:40;display:none}
+
+/* Session form mobile */
+.form-m{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.form-m label{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;display:block}
+.form-m input,.form-m select{width:100%;background:#fff;border:none;border-radius:14px;padding:13px 16px;font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--brown);box-shadow:0 2px 8px rgba(0,0,0,.06);outline:none;appearance:none}
+.form-m .btn-submit{background:var(--brown);color:var(--gold);border:none;border-radius:16px;padding:15px;font-size:15px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;cursor:pointer;width:100%;margin-top:6px}
+.flow-tabs{display:flex;gap:0;margin:8px 20px 0;border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.flow-tab{flex:1;padding:10px 6px;text-align:center;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--text2);border:none;transition:all .15s;font-family:'Plus Jakarta Sans',sans-serif}
+.flow-tab.active{background:var(--brown);color:var(--gold)}
+.panel-m{display:none}.panel-m.active{display:block}
+
+/* Pill separator */
+.pill-sep{text-align:center;padding:8px 0;font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.5px}
+
+/* Tendance chart mock */
+.sparkline{height:48px;width:100%;position:relative;overflow:hidden}
+.sparkline svg{width:100%;height:100%}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.screen.active>*{animation:fadeUp .3s ease both}
+</style>
+</head>
+<body>
+
+<div style="text-align:center;margin-bottom:24px">
+  <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:600;color:#6b5e52;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">Veille Marché Dang · Simulateur Mobile</div>
+  <div style="font-size:11px;color:#9a8a7a">Connecté à <code style="background:#fff;padding:2px 8px;border-radius:6px;font-size:11px">http://localhost:8000</code></div>
+  <div id="api-status" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:11.5px;color:#9a8a7a"><span id="api-dot" style="width:7px;height:7px;border-radius:50%;background:#ccc;display:inline-block"></span><span id="api-label">Connexion…</span></div>
+</div>
+
+<div class="phone-wrap">
+<div class="phone-shell">
+<div class="phone-screen">
+
+  <!-- Notch -->
+  <div class="phone-notch"><div class="notch-cam"></div><div style="width:40px;height:4px;background:#2a2a2a;border-radius:2px"></div><div class="notch-cam"></div></div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <div class="sb-time" id="sb-time">09:41</div>
+    <div class="sb-icons">
+      <i class="fa-solid fa-signal" style="font-size:12px"></i>
+      <i class="fa-solid fa-wifi" style="font-size:12px"></i>
+      <i class="fa-solid fa-battery-three-quarters" style="font-size:12px"></i>
+    </div>
+  </div>
+
+  <!-- Screens -->
+  <div class="screens">
+
+    <!-- ══ ACCUEIL ══ -->
+    <div class="screen active" id="screen-accueil">
+
+      <div class="app-header">
+        <div>
+          <div class="app-header-title">Marché Dang</div>
+          <div class="app-header-sub">Vue d'ensemble</div>
+        </div>
+        <button class="header-btn" onclick="goScreen('alertes')">
+          <i class="fa-solid fa-bell" style="color:#2c2620;font-size:15px"></i>
+          <div id="badge-alertes" class="bn-badge" style="display:none">0</div>
+        </button>
+      </div>
+
+      <!-- CA Hero -->
+      <div class="ca-hero" id="ca-hero">
+        <div class="ca-hero-label">CA · Semaine en cours</div>
+        <div class="ca-hero-amount" id="ca-semaine">—</div>
+        <div class="ca-hero-fcfa">FCFA</div>
+        <div class="ca-hero-trend">
+          <i class="fa-solid fa-minus" id="trend-ico"></i>
+          <span id="trend-label">Chargement…</span>
+          <span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.4)" id="ca-prev-label"></span>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-strip">
+        <div class="kpi-card">
+          <div class="kpi-ico" style="background:var(--gold-bg);color:var(--gold)"><i class="fa-solid fa-users"></i></div>
+          <div class="kpi-val" id="kpi-com">—</div>
+          <div class="kpi-lbl">Commerçants</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-ico" style="background:var(--green-bg);color:var(--green)"><i class="fa-solid fa-tag"></i></div>
+          <div class="kpi-val" id="kpi-act">—</div>
+          <div class="kpi-lbl">Activités</div>
+        </div>
+      </div>
+
+      <!-- CA par catégorie -->
+      <div class="section-head">
+        <span class="section-title">Par catégorie</span>
+        <span class="section-more">Semaine</span>
+      </div>
+      <div id="cat-bars" style="margin-bottom:8px">
+        <div style="padding:12px 20px;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+
+      <!-- Top activités -->
+      <div class="section-head">
+        <span class="section-title">Top activités · mois</span>
+        <span class="section-more" onclick="goScreen('activites')">Tout voir</span>
+      </div>
+      <div id="top-acts">
+        <div style="padding:12px 20px;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+
+    </div><!-- /accueil -->
+
+    <!-- ══ RECHERCHE ══ -->
+    <div class="screen" id="screen-recherche">
+      <div class="app-header">
+        <div><div class="app-header-title">Recherche</div><div class="app-header-sub">Activités, commerçants, zones</div></div>
+      </div>
+      <div class="search-wrap">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="q-input" placeholder="maïs, chaussures, Mama Bawa…" oninput="doSearch()"/>
+        <i class="fa-solid fa-xmark" style="color:var(--text3);cursor:pointer" onclick="clearSearch()"></i>
+      </div>
+      <div class="chips" id="chips-filtre">
+        <div class="chip active" data-f="all" onclick="setFiltreRecherche(this,'all')">Tout</div>
+        <div class="chip" data-f="activites" onclick="setFiltreRecherche(this,'activites')">Activités</div>
+        <div class="chip" data-f="commercants" onclick="setFiltreRecherche(this,'commercants')">Commerçants</div>
+        <div class="chip" data-f="zones" onclick="setFiltreRecherche(this,'zones')">Zones</div>
+      </div>
+      <div id="search-results">
+        <div style="padding:32px 20px;text-align:center;color:var(--text3);font-size:13px"><i class="fa-solid fa-magnifying-glass" style="font-size:28px;margin-bottom:10px;display:block;opacity:.3"></i>Tapez pour rechercher</div>
+      </div>
+    </div><!-- /recherche -->
+
+    <!-- ══ ACTIVITÉS ══ -->
+    <div class="screen" id="screen-activites">
+      <div class="app-header">
+        <div><div class="app-header-title">Activités</div></div>
+        <button class="header-btn"><i class="fa-solid fa-sliders" style="font-size:14px;color:var(--text2)"></i></button>
+      </div>
+      <div class="chips" id="chips-cat">
+        <div class="chip active" data-cid="" onclick="setFiltreAct(this,'')">Toutes</div>
+      </div>
+      <div id="acts-list">
+        <div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+    </div><!-- /activites -->
+
+    <!-- ══ ALERTES ══ -->
+    <div class="screen" id="screen-alertes">
+      <div class="app-header">
+        <div><div class="app-header-title">Alertes</div><div class="app-header-sub" id="alertes-sub">—</div></div>
+        <button class="header-btn" onclick="toutLu()"><i class="fa-solid fa-check-double" style="font-size:13px;color:var(--text2)"></i></button>
+      </div>
+      <div class="chips">
+        <div class="chip active" onclick="setFiltreAlertes(this,null)">Toutes</div>
+        <div class="chip" onclick="setFiltreAlertes(this,'false')">Non lues</div>
+        <div class="chip" onclick="setFiltreAlertes(this,'true')">Lues</div>
+      </div>
+      <div id="alertes-list">
+        <div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+    </div><!-- /alertes -->
+
+    <!-- ══ SAISIE MOBILE ══ -->
+    <div class="screen" id="screen-saisie">
+      <div class="app-header">
+        <div><div class="app-header-title">Saisie</div><div class="app-header-sub">Sessions journalières</div></div>
+      </div>
+
+      <div class="flow-tabs">
+        <button class="flow-tab active" id="ftab-ouvrir" onclick="switchFlowTab('ouvrir')">☀ Ouvrir</button>
+        <button class="flow-tab" id="ftab-fermer" onclick="switchFlowTab('fermer')">🌙 Fermer</button>
+        <button class="flow-tab" id="ftab-post" onclick="switchFlowTab('post')">📋 A posteriori</button>
+      </div>
+
+      <!-- Panel OUVRIR -->
+      <div class="panel-m active" id="fpanel-ouvrir">
+        <div class="form-m">
+          <div>
+            <label>Commerçant *</label>
+            <select id="m-o-com"><option value="">— Sélectionner —</option></select>
+          </div>
+          <div>
+            <label>Date *</label>
+            <input type="date" id="m-o-date"/>
+          </div>
+          <div>
+            <label>Zone (optionnel)</label>
+            <select id="m-o-zone"><option value="">— Aucune —</option></select>
+          </div>
+          <button class="btn-submit" onclick="mOuvrir()"><i class="fa-solid fa-sun"></i> Ouvrir la session</button>
+        </div>
+      </div>
+
+      <!-- Panel FERMER -->
+      <div class="panel-m" id="fpanel-fermer">
+        <div class="form-m">
+          <div>
+            <label>Session ouverte *</label>
+            <select id="m-f-ses" onchange="onMSessionSelect()"><option value="">— Sélectionner —</option></select>
+          </div>
+          <div id="m-ses-info" style="display:none;background:#fff;border-radius:14px;padding:12px 16px;font-size:12.5px;color:var(--text2)"></div>
+          <div>
+            <label>Recette du jour (FCFA) *</label>
+            <input type="number" id="m-f-recette" min="1" step="100" placeholder="ex : 15 000"/>
+          </div>
+          <button class="btn-submit" onclick="mFermer()"><i class="fa-solid fa-moon"></i> Fermer et enregistrer</button>
+        </div>
+      </div>
+
+      <!-- Panel A POSTERIORI -->
+      <div class="panel-m" id="fpanel-post">
+        <div class="form-m">
+          <div>
+            <label>Commerçant *</label>
+            <select id="m-p-com"><option value="">— Sélectionner —</option></select>
+          </div>
+          <div>
+            <label>Date *</label>
+            <input type="date" id="m-p-date"/>
+          </div>
+          <div>
+            <label>Recette (FCFA) *</label>
+            <input type="number" id="m-p-recette" min="1" step="100" placeholder="ex : 15 000"/>
+          </div>
+          <button class="btn-submit" onclick="mPost()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+        </div>
+      </div>
+
+      <div style="padding:0 20px;margin-top:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Sessions récentes</div>
+      </div>
+      <div id="m-sessions-list">
+        <div style="padding:12px 20px;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+
+    </div><!-- /saisie -->
+
+    <!-- ══ DÉTAIL ACTIVITÉ (overlay) ══ -->
+    <div class="detail-pane" id="detail-pane">
+      <div class="detail-back" onclick="closeDetail()">
+        <i class="fa-solid fa-arrow-left"></i><span>Retour</span>
+      </div>
+      <div id="detail-content">
+        <div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)">Chargement…</div>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <div class="bn-item active" id="bn-accueil" onclick="goScreen('accueil')">
+      <div class="bn-ico"><i class="fa-solid fa-house-chimney"></i></div>
+      <div class="bn-label">Accueil</div>
+    </div>
+    <div class="bn-item" id="bn-recherche" onclick="goScreen('recherche')">
+      <div class="bn-ico"><i class="fa-solid fa-magnifying-glass"></i></div>
+      <div class="bn-label">Recherche</div>
+    </div>
+    <div class="bn-item" id="bn-activites" onclick="goScreen('activites')">
+      <div class="bn-ico"><i class="fa-solid fa-tag"></i></div>
+      <div class="bn-label">Activités</div>
+    </div>
+    <div class="bn-item" id="bn-alertes" onclick="goScreen('alertes')">
+      <div class="bn-ico" style="position:relative">
+        <i class="fa-solid fa-bell"></i>
+        <div id="nav-badge" class="bn-badge" style="display:none">0</div>
+      </div>
+      <div class="bn-label">Alertes</div>
+    </div>
+    <div class="bn-item" id="bn-saisie" onclick="goScreen('saisie')">
+      <div class="bn-ico"><i class="fa-solid fa-pen-to-square"></i></div>
+      <div class="bn-label">Saisie</div>
+    </div>
+  </div>
+
+</div><!-- /phone-screen -->
+</div><!-- /phone-shell -->
+</div><!-- /phone-wrap -->
+
+<script>
+const API='http://localhost:8000';
+let CATS=[],ACTS=[],ZONES=[],COMS=[];
+let sessionsOuvertes=[];
+let filtreAlerte=null;
+
+/* ── Helpers ── */
+function fcfa(n){return n==null?'—':Number(n).toLocaleString('fr-FR')}
+function dateStr(s){if(!s)return'—';const d=new Date(s);return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function today(){return new Date().toISOString().split('T')[0]}
+
+/* ── Horloge ── */
+function updateClock(){
+  const n=new Date();
+  document.getElementById('sb-time').textContent=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+updateClock(); setInterval(updateClock,30000);
+
+/* ── API ── */
+async function apiFetch(method,endpoint,body=null){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body) opts.body=JSON.stringify(body);
+  const res=await fetch(`${API}${endpoint}`,opts);
+  if(!res.ok){let m=`HTTP ${res.status}`;try{const d=await res.json();m=d.detail||m}catch(_){};throw new Error(m)}
+  if(res.status===204)return null;
+  return res.json();
+}
+
+/* ── Health ── */
+async function checkApi(){
+  const dot=document.getElementById('api-dot'),lbl=document.getElementById('api-label');
+  try{await apiFetch('GET','/health');dot.style.background='#3d9162';lbl.textContent='API connectée';}
+  catch(_){dot.style.background='#c0392b';lbl.textContent='API hors ligne';}
+}
+
+/* ── Refs ── */
+async function loadRefs(){
+  try{
+    const[cats,acts,zones,coms]=await Promise.all([apiFetch('GET','/categories/'),apiFetch('GET','/activites/'),apiFetch('GET','/zones/'),apiFetch('GET','/commercants/')]);
+    CATS=cats||[];ACTS=acts||[];ZONES=zones||[];COMS=coms||[];
+    populateMobileSelects();
+    populateCatChips();
+  }catch(e){console.warn('refs:',e.message)}
+}
+function populateMobileSelects(){
+  ['m-o-com','m-p-com'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const ph=s.options[0];s.innerHTML='';s.appendChild(ph);
+    COMS.forEach(c=>s.appendChild(new Option(c.telephone+(c.nom_commercial?' — '+c.nom_commercial:''),c.id)));
+  });
+  ['m-o-zone'].forEach(id=>{
+    const s=document.getElementById(id);if(!s)return;
+    const ph=s.options[0];s.innerHTML='';s.appendChild(ph);
+    ZONES.forEach(z=>s.appendChild(new Option(z.nom,z.id)));
+  });
+}
+function populateCatChips(){
+  const div=document.getElementById('chips-cat');if(!div)return;
+  div.innerHTML='<div class="chip active" data-cid="" onclick="setFiltreAct(this,\'\')">Toutes</div>';
+  CATS.forEach(c=>{const d=document.createElement('div');d.className='chip';d.dataset.cid=c.id;d.textContent=(c.icone?c.icone+' ':'')+c.nom;d.onclick=()=>setFiltreAct(d,c.id);div.appendChild(d);});
+}
+
+/* ── Navigation ── */
+function goScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`screen-${name}`)?.classList.add('active');
+  document.getElementById(`bn-${name}`)?.classList.add('active');
+  if(name==='accueil') loadDashboard();
+  else if(name==='activites') loadActivites();
+  else if(name==='alertes') loadAlertes();
+  else if(name==='saisie'){loadSaisieM();loadSessionsOuvertesM();}
+}
+
+/* ── DASHBOARD ── */
+async function loadDashboard(){
+  try{
+    const d=await apiFetch('GET','/indicateurs/dashboard');
+    document.getElementById('kpi-com').textContent=d.nb_commercants_actifs??'—';
+    document.getElementById('kpi-act').textContent=d.nb_activites_suivies??'—';
+    document.getElementById('ca-semaine').textContent=fcfa(d.ca_semaine_courante);
+    const nb=d.nb_alertes_non_lues||0;
+    document.getElementById('nav-badge').textContent=nb;
+    document.getElementById('nav-badge').style.display=nb?'flex':'none';
+    document.getElementById('badge-alertes').textContent=nb;
+    document.getElementById('badge-alertes').style.display=nb?'flex':'none';
+    // Tendance
+    const t=d.tendance_globale;
+    const ico=document.getElementById('trend-ico');
+    const lbl=document.getElementById('trend-label');
+    if(t==='hausse'){ico.className='fa-solid fa-arrow-trend-up';ico.style.color='#3d9162';lbl.textContent='En hausse vs semaine précédente';lbl.style.color='rgba(255,255,255,.7)';}
+    else if(t==='baisse'){ico.className='fa-solid fa-arrow-trend-down';ico.style.color='#e05c3a';lbl.textContent='En baisse vs semaine précédente';lbl.style.color='rgba(255,255,255,.7)';}
+    else{ico.className='fa-solid fa-minus';lbl.textContent='Stable vs semaine précédente';}
+    document.getElementById('ca-prev-label').textContent=d.ca_semaine_precedente?`Préc: ${fcfa(d.ca_semaine_precedente)} F`:'';
+    // CA catégories
+    renderCatBars(d.ca_par_categorie||[]);
+    // Top activités
+    renderTopActs(d.top_activites||[]);
+  }catch(e){console.warn('dashboard:',e.message)}
+}
+
+function renderCatBars(list){
+  const div=document.getElementById('cat-bars');
+  if(!list.length){div.innerHTML='<div style="padding:8px 20px;font-size:12px;color:var(--text3)">Aucune donnée cette semaine</div>';return;}
+  const maxCa=Math.max(...list.map(c=>c.ca||0),1);
+  const colors=['#d4a843','#3d9162','#2563eb','#d97706','#8b5cf6','#e05c3a'];
+  div.innerHTML=list.filter(c=>c.ca>0).map((c,i)=>`
+    <div class="bar-row">
+      <div class="bar-label">${c.icone?c.icone+' ':''}${c.nom}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c.ca/maxCa*100)}%;background:${colors[i%colors.length]}"></div></div>
+      <div class="bar-val">${fcfa(c.ca)}</div>
+    </div>`).join('')||'<div style="padding:8px 20px;font-size:12px;color:var(--text3)">Aucune donnée</div>';
+}
+
+function renderTopActs(list){
+  const div=document.getElementById('top-acts');
+  if(!list.length){div.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text3)">Aucune activité ce mois</div>';return;}
+  div.innerHTML=list.map(a=>`
+    <div class="act-card" onclick="openDetail(${a.activite?.id})">
+      <div class="act-ico" style="background:var(--gold-bg)">${a.activite?.categorie?.icone||'📦'}</div>
+      <div class="act-info">
+        <div class="act-name">${a.activite?.nom||'—'}</div>
+        <div class="act-sub">${a.activite?.categorie?.nom||'—'} · ${a.nb_commercants||0} commerçant${(a.nb_commercants||0)>1?'s':''}</div>
+      </div>
+      <div class="act-right">
+        <div class="act-ca">${fcfa(a.ca_total)}</div>
+        <div class="${a.tendance==='hausse'?'act-trend-up':'act-trend-dn'}">${a.tendance==='hausse'?'↗ hausse':'↘ baisse'}</div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── ACTIVITÉS ── */
+let filtreCat='';
+function setFiltreAct(el,cid){
+  document.querySelectorAll('#chips-cat .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');filtreCat=cid;loadActivites();
+}
+async function loadActivites(){
+  const div=document.getElementById('acts-list');
+  div.innerHTML='<div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)">Chargement…</div>';
+  try{
+    let url='/activites/?actif_seulement=false';if(filtreCat) url+=`&categorie_id=${filtreCat}`;
+    const list=await apiFetch('GET',url);
+    if(!list?.length){div.innerHTML='<div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)">Aucune activité</div>';return;}
+    div.innerHTML=list.map(a=>`
+      <div class="act-card" onclick="openDetail(${a.id})">
+        <div class="act-ico" style="background:var(--gold-bg)">${a.categorie?.icone||'📦'}</div>
+        <div class="act-info">
+          <div class="act-name">${a.nom}</div>
+          <div class="act-sub">${a.categorie?.nom||'—'}</div>
+        </div>
+        <div class="act-right">
+          <div class="act-ca">${a.ca_total?fcfa(a.ca_total):''}</div>
+          <div style="margin-top:4px">${a.actif?'<span class="badge-m bm-green">Actif</span>':'<span class="badge-m bm-gray">Inactif</span>'}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){div.innerHTML=`<div style="padding:24px 20px;font-size:12px;color:var(--text3)">Erreur: ${e.message}</div>`;}
+}
+
+/* ── DÉTAIL ACTIVITÉ ── */
+async function openDetail(id){
+  if(!id)return;
+  const pane=document.getElementById('detail-pane');
+  document.getElementById('detail-content').innerHTML='<div style="padding:24px 20px;text-align:center;font-size:12px;color:var(--text3)"><i class="fa-solid fa-spinner fa-spin"></i> Chargement…</div>';
+  pane.classList.add('open');
+  try{
+    const d=await apiFetch('GET',`/activites/${id}/detail`);
+    document.getElementById('detail-content').innerHTML=renderDetail(d);
+  }catch(e){
+    document.getElementById('detail-content').innerHTML=`<div style="padding:24px 20px;font-size:12px;color:var(--text3)">Erreur: ${e.message}</div>`;
+  }
+}
+function closeDetail(){document.getElementById('detail-pane').classList.remove('open');}
+function renderDetail(d){
+  const coms=(d.commercants||[]).map(c=>`
+    <div class="com-row-m">
+      <div class="com-avatar-m"><i class="fa-solid fa-user"></i></div>
+      <div style="flex:1;min-width:0">
+        <div class="com-name-m">${c.nom_commercial||c.telephone}</div>
+        <div class="com-sub-m">${c.nb_sessions} session${c.nb_sessions>1?'s':''} · dernière ${dateStr(c.derniere_session)}</div>
+      </div>
+      <div class="com-ca-m">${fcfa(c.ca_total)} F</div>
+    </div>`).join('');
+  const sess=(d.sessions_recentes||[]).map(s=>`
+    <div class="sess-row-m">
+      <div class="sess-date-m">${dateStr(s.date_session)}</div>
+      <div class="sess-who-m">${s.commercant_nom||'—'}${s.zone_nom?' · '+s.zone_nom:''}</div>
+      <div class="sess-amt-m">${s.statut==='ferme'?`<span class="badge-m bm-green">${fcfa(s.recette_journaliere)} F</span>`:'<span class="badge-m bm-gray">ouvert</span>'}</div>
+    </div>`).join('');
+  return `
+    <div class="detail-hero">
+      <div class="detail-hero-cat">${d.categorie?.icone||''}  ${d.categorie?.nom||'—'} · ${d.actif?'<span style="color:#6be0a0">Actif</span>':'<span style="color:rgba(255,255,255,.4)">Inactif</span>'}</div>
+      <div class="detail-hero-name" style="margin-top:6px">${d.nom}</div>
+      ${d.mots_cles?`<div style="margin-top:8px;font-size:11px;color:rgba(255,255,255,.35)">${d.mots_cles}</div>`:''}
+    </div>
+    <div class="detail-kpis">
+      <div class="dkpi"><div class="dkpi-v">${fcfa(d.ca_total)}</div><div class="dkpi-l">CA total</div></div>
+      <div class="dkpi"><div class="dkpi-v">${fcfa(d.ca_semaine)}</div><div class="dkpi-l">Semaine</div></div>
+      <div class="dkpi"><div class="dkpi-v">${fcfa(d.ca_mois)}</div><div class="dkpi-l">Mois</div></div>
+    </div>
+    <div class="detail-kpis">
+      <div class="dkpi"><div class="dkpi-v">${d.nb_sessions_total}</div><div class="dkpi-l">Sessions</div></div>
+      <div class="dkpi"><div class="dkpi-v">${d.nb_sessions_30j}</div><div class="dkpi-l">30 derniers j.</div></div>
+      <div class="dkpi"><div class="dkpi-v">${d.nb_commercants}</div><div class="dkpi-l">Commerçants</div></div>
+    </div>
+    <div class="section-head"><span class="section-title">Commerçants (${d.nb_commercants})</span></div>
+    <div>${coms||'<div style="padding:12px 20px;font-size:12px;color:var(--text3)">Aucun</div>'}</div>
+    <div class="section-head" style="margin-top:8px"><span class="section-title">10 dernières sessions</span></div>
+    <div>${sess||'<div style="padding:12px 20px;font-size:12px;color:var(--text3)">Aucune</div>'}</div>
+  `;
+}
+
+/* ── RECHERCHE ── */
+let filtreRecherche='all';
+let searchTimer=null;
+function setFiltreRecherche(el,f){
+  document.querySelectorAll('#chips-filtre .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');filtreRecherche=f;doSearch();
+}
+function clearSearch(){document.getElementById('q-input').value='';doSearch();}
+function doSearch(){
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(async()=>{
+    const q=document.getElementById('q-input').value.trim();
+    const div=document.getElementById('search-results');
+    if(!q){div.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--text3);font-size:13px"><i class="fa-solid fa-magnifying-glass" style="font-size:28px;margin-bottom:10px;display:block;opacity:.3"></i>Tapez pour rechercher</div>';return;}
+    div.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+    try{
+      const r=await apiFetch('GET',`/recherche/?q=${encodeURIComponent(q)}`);
+      let html='';
+      const act=(r.activites||[]).filter(()=>filtreRecherche==='all'||filtreRecherche==='activites');
+      const com=(r.commercants||[]).filter(()=>filtreRecherche==='all'||filtreRecherche==='commercants');
+      const zon=(r.zones||[]).filter(()=>filtreRecherche==='all'||filtreRecherche==='zones');
+      if(act.length){
+        html+=`<div class="pill-sep">Activités (${act.length})</div>`;
+        html+=act.map(a=>`<div class="act-card" onclick="openDetail(${a.id})"><div class="act-ico" style="background:var(--gold-bg)">${a.categorie?.icone||'📦'}</div><div class="act-info"><div class="act-name">${a.nom}</div><div class="act-sub">${a.categorie?.nom||'—'}</div></div></div>`).join('');
+      }
+      if(com.length){
+        html+=`<div class="pill-sep">Commerçants (${com.length})</div>`;
+        html+=com.map(c=>`<div class="act-card"><div class="act-ico" style="background:var(--blue-bg);color:var(--blue)"><i class="fa-solid fa-user"></i></div><div class="act-info"><div class="act-name">${c.telephone}${c.nom_commercial?' — '+c.nom_commercial:''}</div><div class="act-sub">${c.activite?.nom||'—'}</div></div></div>`).join('');
+      }
+      if(zon.length){
+        html+=`<div class="pill-sep">Zones (${zon.length})</div>`;
+        html+=zon.map(z=>`<div class="act-card"><div class="act-ico" style="background:var(--amber-bg);color:var(--amber)"><i class="fa-solid fa-location-dot"></i></div><div class="act-info"><div class="act-name">${z.nom}</div><div class="act-sub">${z.description||''}</div></div></div>`).join('');
+      }
+      if(!html) html='<div style="padding:32px 20px;text-align:center;color:var(--text3);font-size:13px">Aucun résultat pour « '+q+' »</div>';
+      div.innerHTML=html;
+    }catch(e){div.innerHTML=`<div style="padding:20px;font-size:12px;color:var(--text3)">Erreur: ${e.message}</div>`;}
+  },300);
+}
+
+/* ── ALERTES ── */
+async function loadAlertes(){
+  const div=document.getElementById('alertes-list');
+  div.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--text3)">Chargement…</div>';
+  let url='/alertes/?limit=100';
+  if(filtreAlerte==='false') url+='&lues=false';
+  if(filtreAlerte==='true')  url+='&lues=true';
+  try{
+    const list=await apiFetch('GET',url);
+    const nb=list?.filter(a=>!a.lue).length||0;
+    document.getElementById('alertes-sub').textContent=`${nb} non lue${nb>1?'s':''}`;
+    if(!list?.length){div.innerHTML='<div style="padding:32px 20px;text-align:center;color:var(--text3);font-size:13px"><i class="fa-solid fa-check-circle" style="font-size:28px;margin-bottom:10px;display:block;color:#3d9162;opacity:.5"></i>Aucune alerte</div>';return;}
+    div.innerHTML=list.map(a=>`
+      <div class="alert-item" id="al-${a.id}">
+        <div class="alert-dot ${a.niveau}">
+          <i class="fa-solid ${a.niveau==='critique'?'fa-circle-exclamation':a.niveau==='warning'?'fa-triangle-exclamation':'fa-info-circle'}"></i>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="alert-msg">${a.message}</div>
+          <div class="alert-meta">
+            ${!a.lue?'<span class="unread-dot"></span>':''}
+            <span>${dateStr(a.created_at)}</span>
+            ${a.activite?`<span>· ${a.activite.nom}</span>`:''}
+          </div>
+        </div>
+        ${!a.lue?`<button onclick="marquerLue(${a.id})" style="flex-shrink:0;background:none;border:1px solid var(--border);border-radius:10px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif">Lu</button>`:''}
+      </div>`).join('');
+  }catch(e){div.innerHTML=`<div style="padding:20px;font-size:12px;color:var(--text3)">Erreur: ${e.message}</div>`;}
+}
+function setFiltreAlertes(el,f){
+  document.querySelectorAll('#screen-alertes .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');filtreAlerte=f;loadAlertes();
+}
+async function marquerLue(id){
+  try{await apiFetch('PATCH',`/alertes/${id}/lue`,{lue:true});loadAlertes();}
+  catch(e){alert('Erreur: '+e.message);}
+}
+async function toutLu(){
+  try{await apiFetch('PATCH','/alertes/tout-lire');loadAlertes();}
+  catch(e){alert('Erreur: '+e.message);}
+}
+
+/* ── SAISIE MOBILE ── */
+function switchFlowTab(tab){
+  ['ouvrir','fermer','post'].forEach(t=>{
+    document.getElementById(`fpanel-${t}`).classList.toggle('active',t===tab);
+    const btn=document.getElementById(`ftab-${t}`);
+    if(btn){btn.classList.toggle('active',t===tab);}
+  });
+  if(tab==='fermer') loadSessionsOuvertesM();
+}
+
+async function loadSaisieM(){
+  document.getElementById('m-o-date').value=today();
+  document.getElementById('m-p-date').value=today();
+  await loadRefs();
+  await loadSessionsM();
+}
+
+async function loadSessionsOuvertesM(){
+  const sel=document.getElementById('m-f-ses');if(!sel)return;
+  try{
+    const list=await apiFetch('GET','/sessions/?statut=ouvert&limit=100');
+    sessionsOuvertes=list||[];
+    const ph=sel.options[0];sel.innerHTML='';sel.appendChild(ph);
+    sessionsOuvertes.forEach(s=>{
+      const label=`${s.commercant?.telephone||'?'}${s.commercant?.nom_commercial?' — '+s.commercant.nom_commercial:''} · ${s.activite?.nom||'?'} · ${dateStr(s.date_session)}`;
+      sel.appendChild(new Option(label,s.id));
+    });
+  }catch(e){console.warn(e.message);}
+}
+function onMSessionSelect(){
+  const sid=parseInt(document.getElementById('m-f-ses').value);
+  const s=sessionsOuvertes.find(x=>x.id===sid);
+  const info=document.getElementById('m-ses-info');
+  if(s){info.innerHTML=`<strong>${s.commercant?.telephone||'?'}</strong> · ${s.activite?.nom||'?'} · ${dateStr(s.date_session)}`;info.style.display='block';}
+  else info.style.display='none';
+}
+
+async function loadSessionsM(){
+  const div=document.getElementById('m-sessions-list');
+  try{
+    const list=await apiFetch('GET','/sessions/?limit=20');
+    if(!list?.length){div.innerHTML='<div style="padding:12px 20px;font-size:12px;color:var(--text3)">Aucune session</div>';return;}
+    div.innerHTML=list.map(s=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--brown)">${s.commercant?.telephone||'—'}${s.commercant?.nom_commercial?' — '+s.commercant.nom_commercial:''}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${s.activite?.nom||'—'} · ${dateStr(s.date_session)}</div>
+        </div>
+        <div style="text-align:right">
+          ${s.recette_journaliere!=null?`<div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--brown)">${fcfa(s.recette_journaliere)} F</div>`:''}
+          <div style="margin-top:2px">${s.statut==='ferme'?'<span class="badge-m bm-green">fermé</span>':'<span class="badge-m bm-gold">ouvert</span>'}</div>
+        </div>
+      </div>`).join('');
+  }catch(e){div.innerHTML=`<div style="padding:12px 20px;font-size:12px;color:var(--text3)">Erreur: ${e.message}</div>`;}
+}
+
+function toast(msg,ok=true){
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:${ok?'#2c2620':'#c0392b'};color:${ok?'#d4a843':'#fff'};padding:11px 20px;border-radius:20px;font-size:13px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;z-index:9999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.3);animation:fadeUp .25s ease`;
+  el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3000);
+}
+
+async function mOuvrir(){
+  const com=document.getElementById('m-o-com').value;
+  const date=document.getElementById('m-o-date').value;
+  if(!com||!date){toast('Commerçant et date obligatoires',false);return;}
+  const payload={commercant_id:parseInt(com),date_session:date,statut:'ouvert'};
+  const zone=document.getElementById('m-o-zone').value;if(zone) payload.zone_observation_id=parseInt(zone);
+  try{
+    const s=await apiFetch('POST','/sessions/',payload);
+    toast(`Session ouverte · ID ${s.id}`);
+    document.getElementById('m-o-com').value='';
+    document.getElementById('m-o-date').value=today();
+    loadSessionsM();loadSessionsOuvertesM();
+  }catch(e){toast(e.message,false);}
+}
+
+async function mFermer(){
+  const sid=parseInt(document.getElementById('m-f-ses').value);
+  const rec=parseFloat(document.getElementById('m-f-recette').value);
+  if(!sid||!rec){toast('Session et recette obligatoires',false);return;}
+  try{
+    await apiFetch('PATCH',`/sessions/${sid}`,{statut:'ferme',recette_journaliere:rec});
+    const s=sessionsOuvertes.find(x=>x.id===sid);
+    toast(`CA de ${s?.activite?.nom||'?'} mis à jour`);
+    document.getElementById('m-f-ses').value='';
+    document.getElementById('m-f-recette').value='';
+    document.getElementById('m-ses-info').style.display='none';
+    loadSessionsM();loadSessionsOuvertesM();
+  }catch(e){toast(e.message,false);}
+}
+
+async function mPost(){
+  const com=document.getElementById('m-p-com').value;
+  const date=document.getElementById('m-p-date').value;
+  const rec=parseFloat(document.getElementById('m-p-recette').value);
+  if(!com||!date||!rec){toast('Tous les champs obligatoires',false);return;}
+  try{
+    await apiFetch('POST','/sessions/',{commercant_id:parseInt(com),date_session:date,statut:'ferme',recette_journaliere:rec});
+    toast('Session enregistrée · CA mis à jour');
+    document.getElementById('m-p-com').value='';document.getElementById('m-p-recette').value='';
+    document.getElementById('m-p-date').value=today();
+    loadSessionsM();
+  }catch(e){toast(e.message,false);}
+}
+
+/* ── INIT ── */
+async function init(){
+  checkApi();setInterval(checkApi,30000);
+  await loadRefs();
+  await loadDashboard();
+}
+init();
+</script>
+</body>
+</html>

@@ -78,7 +78,7 @@ def ca_periode(db: Session, activite_id: int,
     """
     r = (db.query(func.sum(SessionJournaliere.recette_journaliere))
          .filter(SessionJournaliere.activite_id == activite_id,
-                 SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+                 SessionJournaliere.statut == StatutSessionEnum.FERME,
                  SessionJournaliere.recette_journaliere.isnot(None),
                  SessionJournaliere.date_session >= d_debut,
                  SessionJournaliere.date_session <= d_fin)
@@ -91,7 +91,7 @@ def nb_commercants_actifs(db: Session, activite_id: int,
     """Nombre de commerçants distincts actifs pour une activité sur une période."""
     r = (db.query(func.count(func.distinct(SessionJournaliere.commercant_id)))
          .filter(SessionJournaliere.activite_id == activite_id,
-                 SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+                 SessionJournaliere.statut == StatutSessionEnum.FERME,
                  SessionJournaliere.date_session >= d_debut,
                  SessionJournaliere.date_session <= d_fin)
          .scalar())
@@ -116,7 +116,7 @@ def taux_presence_moyen(db: Session, activite_id: int,
                           SessionJournaliere.date_session <= d_fin).scalar() or 0)
         nb_ouv = (db.query(func.count(SessionJournaliere.id))
                   .filter(SessionJournaliere.commercant_id == cid,
-                          SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+                          SessionJournaliere.statut == StatutSessionEnum.FERME,
                           SessionJournaliere.date_session >= d_debut,
                           SessionJournaliere.date_session <= d_fin).scalar() or 0)
         if nb_obs > 0:
@@ -153,7 +153,7 @@ def ca_categorie(db: Session, categorie_id: int,
          .join(Activite, SessionJournaliere.activite_id == Activite.id)
          .filter(Activite.categorie_id == categorie_id,
                  Activite.actif == True,
-                 SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+                 SessionJournaliere.statut == StatutSessionEnum.FERME,
                  SessionJournaliere.recette_journaliere.isnot(None),
                  SessionJournaliere.date_session >= d_debut,
                  SessionJournaliere.date_session <= d_fin)
@@ -198,7 +198,7 @@ def ca_global(db: Session, d0: date, d1: date) -> Optional[float]:
     = somme des CA de toutes les catégories.
     """
     r = (db.query(func.sum(SessionJournaliere.recette_journaliere))
-         .filter(SessionJournaliere.statut == StatutSessionEnum.OUVERT,
+         .filter(SessionJournaliere.statut == StatutSessionEnum.FERME,
                  SessionJournaliere.recette_journaliere.isnot(None),
                  SessionJournaliere.date_session >= d0,
                  SessionJournaliere.date_session <= d1)

@@ -525,84 +525,170 @@
 
       <!-- ══ SAISIE ══ -->
       <div class="page" id="page-saisie">
+
+        <!-- Flux info banner -->
+        <div style="display:flex;align-items:center;gap:24px;padding:12px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:20px;font-size:12.5px;">
+          <div style="display:flex;align-items:center;gap:8px;color:var(--gold)"><i class="fa-solid fa-sun"></i><strong>Matin</strong> : Ouvrir la session <span style="color:var(--text3)">(sans recette)</span></div>
+          <div style="color:var(--border2);font-size:18px">→</div>
+          <div style="display:flex;align-items:center;gap:8px;color:var(--green)"><i class="fa-solid fa-moon"></i><strong>Soir</strong> : Fermer avec la recette <span style="color:var(--text3)">(CA calculé à ce moment)</span></div>
+          <div style="color:var(--border2);font-size:18px">→</div>
+          <div style="display:flex;align-items:center;gap:8px;color:var(--text3)"><i class="fa-solid fa-calculator"></i>Indicateurs recalculés <strong style="color:var(--text2)">automatiquement</strong></div>
+        </div>
+
+        <!-- Tabs -->
+        <div style="display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;width:fit-content">
+          <button id="tab-ouvrir" onclick="switchTab('ouvrir')" style="padding:10px 20px;font-size:13px;font-weight:600;background:var(--gold);color:#1a1400;border:none;cursor:pointer;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-sun"></i> Ouvrir une session</button>
+          <button id="tab-fermer" onclick="switchTab('fermer')" style="padding:10px 20px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text2);border:none;cursor:pointer;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-moon"></i> Fermer / recette</button>
+          <button id="tab-saisie-post" onclick="switchTab('saisie-post')" style="padding:10px 20px;font-size:13px;font-weight:600;background:var(--surface);color:var(--text2);border:none;cursor:pointer;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-clock-rotate-left"></i> Saisie a posteriori</button>
+        </div>
+
         <div class="grid-2l" style="align-items:start">
           <div>
-            <form id="form-session" novalidate>
-              <div class="form-section mb-14">
-                <div class="form-section-head"><i class="fa-solid fa-user-tie"></i><span class="form-section-title">Commerçant</span></div>
-                <div class="form-section-body">
-                  <div class="form-row1">
-                    <div class="form-group" id="fg-s-com">
-                      <label class="form-label">Sélectionner le commerçant <span class="req">*</span></label>
-                      <div class="select-wrap"><select class="form-select" id="s-com" required onchange="onComSelect()"><option value="">— Téléphone / Nom commercial —</option></select></div>
+
+            <!-- ─ TAB 1 : OUVRIR ─ -->
+            <div id="panel-ouvrir">
+              <form id="form-ouvrir" novalidate>
+                <div class="form-section mb-14">
+                  <div class="form-section-head"><i class="fa-solid fa-user-tie"></i><span class="form-section-title">Commerçant</span></div>
+                  <div class="form-section-body">
+                    <div class="form-group" id="fg-o-com">
+                      <label class="form-label">Commerçant <span class="req">*</span></label>
+                      <div class="select-wrap"><select class="form-select" id="o-com" required onchange="onComSelectO()"><option value="">— Téléphone / Nom commercial —</option></select></div>
                       <span class="form-error-msg">Veuillez sélectionner un commerçant</span>
                     </div>
+                    <div id="com-info-strip-o" style="display:none;margin-top:10px">
+                      <div class="form-row">
+                        <div class="form-group"><label class="form-label">Type de présence</label><input class="form-input" id="oi-type" readonly style="color:var(--text2);cursor:default" /></div>
+                        <div class="form-group"><label class="form-label">Activité principale</label><input class="form-input" id="oi-act" readonly style="color:var(--text2);cursor:default" /></div>
+                      </div>
+                    </div>
                   </div>
-                  <div id="com-info-strip" style="display:none">
+                </div>
+                <div class="form-section mb-14">
+                  <div class="form-section-head"><i class="fa-solid fa-calendar-day"></i><span class="form-section-title">Date de la session</span></div>
+                  <div class="form-section-body">
                     <div class="form-row">
-                      <div class="form-group"><label class="form-label">Type de présence</label><input class="form-input" id="ci-type" readonly style="color:var(--text2);cursor:default" /></div>
-                      <div class="form-group"><label class="form-label">Activité principale</label><input class="form-input" id="ci-act" readonly style="color:var(--text2);cursor:default" /></div>
+                      <div class="form-group" id="fg-o-date">
+                        <label class="form-label">Date <span class="req">*</span></label>
+                        <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="o-date" required /></div>
+                        <span class="form-error-msg">Date obligatoire</span>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Activité exercée ce jour</label>
+                        <div class="select-wrap"><select class="form-select" id="o-act"><option value="">— Activité principale (défaut) —</option></select></div>
+                        <span class="form-hint">Laisser vide = activité principale</span>
+                      </div>
+                    </div>
+                    <div class="form-row" style="margin-top:10px">
+                      <div class="form-group">
+                        <label class="form-label">Zone d'observation</label>
+                        <div class="select-wrap"><select class="form-select" id="o-zone"><option value="">— Facultatif —</option></select></div>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Notes terrain (facultatif)</label>
+                        <input class="form-input" type="text" id="o-notes" placeholder="Remarques matin…" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="form-section mb-14">
-                <div class="form-section-head"><i class="fa-solid fa-calendar-day"></i><span class="form-section-title">Session du jour</span></div>
-                <div class="form-section-body">
-                  <div class="form-row">
-                    <div class="form-group" id="fg-s-date">
-                      <label class="form-label">Date <span class="req">*</span></label>
-                      <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="s-date" required /></div>
-                      <span class="form-error-msg">Date obligatoire</span>
+                <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="resetOuvrir()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+                  <button type="submit" class="btn btn-primary" id="btn-ouvrir"><i class="fa-solid fa-sun"></i> Ouvrir la session</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- ─ TAB 2 : FERMER ─ -->
+            <div id="panel-fermer" style="display:none">
+              <form id="form-fermer" novalidate>
+                <div class="form-section mb-14">
+                  <div class="form-section-head"><i class="fa-solid fa-moon"></i><span class="form-section-title">Fermeture de session</span><span class="form-section-tag b-green" style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px">CA mis à jour automatiquement</span></div>
+                  <div class="form-section-body">
+                    <div class="form-group mb-14" id="fg-f-ses">
+                      <label class="form-label">Session à fermer <span class="req">*</span></label>
+                      <div class="select-wrap"><select class="form-select" id="f-ses" required onchange="onSessionSelect()"><option value="">— Sélectionner une session ouverte —</option></select></div>
+                      <span class="form-hint">Seules les sessions <strong>ouvertes aujourd'hui</strong> sont listées</span>
+                      <span class="form-error-msg">Sélectionner une session</span>
                     </div>
-                    <div class="form-group" id="fg-s-statut">
-                      <label class="form-label">Statut <span class="req">*</span></label>
-                      <div class="select-wrap"><select class="form-select" id="s-statut" required onchange="onStatutChange()"><option value="ouvert">Ouvert</option><option value="ferme">Fermé</option><option value="absent_maladie">Absent — maladie</option><option value="absent_approvisionnement">Absent — approvisionnement</option><option value="inconnu">Inconnu</option></select></div>
+                    <div id="ses-info-strip" style="display:none;margin-bottom:14px">
+                      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:12.5px;color:var(--text2)">
+                        <span id="si-com" style="font-weight:600;color:var(--text)">—</span>
+                        &nbsp;·&nbsp; <span id="si-act">—</span>
+                        &nbsp;·&nbsp; <span id="si-date">—</span>
+                      </div>
                     </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group" id="fg-s-act">
-                      <label class="form-label">Activité exercée ce jour</label>
-                      <div class="select-wrap"><select class="form-select" id="s-act"><option value="">— Activité principale (défaut) —</option></select></div>
-                      <span class="form-hint">Laisser vide = activité principale du commerçant</span>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Zone d'observation</label>
-                      <div class="select-wrap"><select class="form-select" id="s-zone"><option value="">— Facultatif —</option></select></div>
+                    <div class="form-row">
+                      <div class="form-group" id="fg-f-recette">
+                        <label class="form-label">Recette de la journée (FCFA) <span class="req">*</span></label>
+                        <div class="input-wrap"><i class="iico fa-solid fa-coins"></i><input class="form-input" type="number" id="f-recette" min="1" step="100" placeholder="ex : 15 000" /></div>
+                        <span class="form-hint">Total journalier déclaré par le commerçant</span>
+                        <span class="form-error-msg">Montant obligatoire</span>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Fiabilité</label>
+                        <div class="select-wrap"><select class="form-select" id="f-fiab"><option value="0.90">0.90 — Agent + fiche papier</option><option value="0.65">0.65 — Déclaration directe</option><option value="0.40">0.40 — Estimation</option></select></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="form-section mb-14" id="bloc-recette">
-                <div class="form-section-head"><i class="fa-solid fa-money-bill-wave"></i><span class="form-section-title">Recette journalière</span></div>
-                <div class="form-section-body">
-                  <div class="form-row">
-                    <div class="form-group" id="fg-s-recette">
-                      <label class="form-label">Montant global déclaré (FCFA) <span class="req">*</span></label>
-                      <div class="input-wrap"><i class="iico fa-solid fa-coins"></i><input class="form-input" type="number" id="s-recette" min="0" step="100" placeholder="ex : 15 000" /></div>
-                      <span class="form-hint">Total journalier — bilan de la journée entière</span>
-                      <span class="form-error-msg">Montant obligatoire si ouvert</span>
+                <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="resetFermer()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+                  <button type="submit" class="btn btn-success" id="btn-fermer"><i class="fa-solid fa-moon"></i> Fermer et enregistrer la recette</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- ─ TAB 3 : SAISIE A POSTERIORI ─ -->
+            <div id="panel-saisie-post" style="display:none">
+              <div class="rule-banner" style="margin-bottom:16px"><i class="fa-solid fa-circle-info"></i><span>Pour saisir une session passée (recette connue d'emblée) — crée et ferme en une seule opération.</span></div>
+              <form id="form-post" novalidate>
+                <div class="form-section mb-14">
+                  <div class="form-section-head"><i class="fa-solid fa-clock-rotate-left"></i><span class="form-section-title">Session passée</span></div>
+                  <div class="form-section-body">
+                    <div class="form-row">
+                      <div class="form-group" id="fg-p-com">
+                        <label class="form-label">Commerçant <span class="req">*</span></label>
+                        <div class="select-wrap"><select class="form-select" id="p-com" required><option value="">— Sélectionner —</option></select></div>
+                        <span class="form-error-msg">Commerçant obligatoire</span>
+                      </div>
+                      <div class="form-group" id="fg-p-date">
+                        <label class="form-label">Date <span class="req">*</span></label>
+                        <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="p-date" required /></div>
+                        <span class="form-error-msg">Date obligatoire</span>
+                      </div>
                     </div>
-                    <div class="form-group">
-                      <label class="form-label">Fiabilité de la donnée</label>
-                      <div class="select-wrap"><select class="form-select" id="s-fiab"><option value="0.90">0.90 — Agent + fiche papier</option><option value="0.65">0.65 — Déclaration directe</option><option value="0.40">0.40 — Estimation terrain</option></select></div>
+                    <div class="form-row" style="margin-top:10px">
+                      <div class="form-group" id="fg-p-recette">
+                        <label class="form-label">Recette (FCFA) <span class="req">*</span></label>
+                        <div class="input-wrap"><i class="iico fa-solid fa-coins"></i><input class="form-input" type="number" id="p-recette" min="1" step="100" placeholder="ex : 15 000" /></div>
+                        <span class="form-error-msg">Recette obligatoire</span>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Activité (si différente)</label>
+                        <div class="select-wrap"><select class="form-select" id="p-act"><option value="">— Activité principale (défaut) —</option></select></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div class="form-section mb-14">
-                <div class="form-section-head"><i class="fa-solid fa-note-sticky"></i><span class="form-section-title">Notes de terrain</span><span class="form-section-tag optional b-gray" style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px">Facultatif</span></div>
-                <div class="form-section-body"><div class="form-row1"><div class="form-group full"><textarea class="form-textarea" id="s-notes" placeholder="Observations qualitatives, contexte…"></textarea></div></div></div>
-              </div>
-              <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="resetSession()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
-                <button type="submit" class="btn btn-primary" id="btn-session"><i class="fa-solid fa-floppy-disk"></i> Enregistrer la session</button>
-              </div>
-            </form>
+                <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('form-post').reset()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+                  <button type="submit" class="btn btn-primary" id="btn-post"><i class="fa-solid fa-floppy-disk"></i> Enregistrer (fermé)</button>
+                </div>
+              </form>
+            </div>
+
           </div>
+
+          <!-- Sessions récentes -->
           <div class="card" style="position:sticky;top:78px">
-            <div class="card-head"><div class="card-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Sessions récentes</div><span class="text-dim">50 dernières</span></div>
-            <div id="sessions-list" style="max-height:560px;overflow-y:auto"><div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div></div>
+            <div class="card-head">
+              <div class="card-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Sessions récentes</div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" onclick="refreshSessions('ouvert')" id="btn-filter-ouvert" style="font-size:11px"><i class="fa-solid fa-sun"></i> Ouvertes</button>
+                <button class="btn btn-ghost btn-sm" onclick="refreshSessions(null)">Tout</button>
+              </div>
+            </div>
+            <div id="sessions-list" style="max-height:580px;overflow-y:auto"><div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div></div>
           </div>
         </div>
       </div><!-- /saisie -->
@@ -927,25 +1013,30 @@
     } catch(e){ console.warn('Référentiels:',e.message); }
   }
   function populateSelects() {
+    // Catégories
     ['a-cat','f-act-cat'].forEach(id => {
       const s=document.getElementById(id); if(!s) return;
       const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
       CATS.forEach(c=>s.appendChild(new Option(c.icone?`${c.icone} ${c.nom}`:c.nom, c.id)));
     });
-    ['c-act','s-act','f-com-act'].forEach(id => {
+    // Activités
+    ['c-act','o-act','p-act','f-com-act'].forEach(id => {
       const s=document.getElementById(id); if(!s) return;
       const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
       ACTS.forEach(a=>s.appendChild(new Option(a.nom, a.id)));
     });
-    ['s-zone','c-zone'].forEach(id => {
+    // Zones
+    ['o-zone','c-zone'].forEach(id => {
       const s=document.getElementById(id); if(!s) return;
       const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
       ZONES.forEach(z=>s.appendChild(new Option(z.nom, z.id)));
     });
-    const sc=document.getElementById('s-com'); if(sc) {
+    // Commerçants
+    ['o-com','p-com'].forEach(id => {
+      const sc=document.getElementById(id); if(!sc) return;
       const ph=sc.options[0]; sc.innerHTML=''; sc.appendChild(ph);
       COMS.forEach(c=>{ const o=new Option(c.telephone+(c.nom_commercial?' — '+c.nom_commercial:''),c.id); o.dataset.type=c.type_presence; o.dataset.act=c.activite?.nom||''; o.dataset.actId=c.activite?.id||''; sc.appendChild(o); });
-    }
+    });
   }
 
   /* ── HEALTH CHECK ── */
@@ -1021,31 +1112,124 @@
     b.textContent=n||0; b.classList.toggle('zero',!n);
   }
 
-  /* ── SAISIE ── */
+  /* ── SAISIE — TABS ── */
+  function switchTab(tab) {
+    ['ouvrir','fermer','saisie-post'].forEach(t => {
+      const panel=document.getElementById('panel-'+t);
+      if(panel) panel.style.display = t===tab ? 'block' : 'none';
+      const btn=document.getElementById('tab-'+t);
+      if(btn){ btn.style.background=t===tab?'var(--gold)':'var(--surface)'; btn.style.color=t===tab?'#1a1400':'var(--text2)'; }
+    });
+    if(tab==='fermer') loadSessionsOuvertes();
+  }
+
   async function loadSaisie() {
     await loadRefs();
-    document.getElementById('s-date').value = today();
+    document.getElementById('o-date').value=today();
+    document.getElementById('p-date').value=today();
     refreshSessions();
+    loadSessionsOuvertes();
   }
+
   function today() { return new Date().toISOString().split('T')[0]; }
-  function onComSelect() {
-    const sel=document.getElementById('s-com');
+
+  /* Onglet 1 : OUVRIR */
+  function onComSelectO() {
+    const sel=document.getElementById('o-com');
     const opt=sel.options[sel.selectedIndex];
-    const strip=document.getElementById('com-info-strip');
-    if (opt.value) {
-      document.getElementById('ci-type').value = opt.dataset.type||'';
-      document.getElementById('ci-act').value  = opt.dataset.act||'';
-      strip.style.display='block';
-    } else { strip.style.display='none'; }
+    const strip=document.getElementById('com-info-strip-o');
+    if(opt.value){ document.getElementById('oi-type').value=opt.dataset.type||''; document.getElementById('oi-act').value=opt.dataset.act||''; strip.style.display='block'; }
+    else strip.style.display='none';
   }
-  function onStatutChange() {
-    const v=document.getElementById('s-statut').value;
-    document.getElementById('bloc-recette').style.display = v==='ouvert'?'block':'none';
-  }
-  async function refreshSessions() {
-    const div=document.getElementById('sessions-list');
+  function resetOuvrir() { document.getElementById('form-ouvrir').reset(); document.getElementById('o-date').value=today(); document.getElementById('com-info-strip-o').style.display='none'; }
+
+  document.getElementById('form-ouvrir').addEventListener('submit', async e => {
+    e.preventDefault();
+    let ok=true;
+    if(!val('o-com'))  { markError('fg-o-com');  ok=false; }
+    if(!val('o-date')) { markError('fg-o-date'); ok=false; }
+    if(!ok){ snack('Champs manquants','','warn'); return; }
+    setBtnLoading('btn-ouvrir',true);
+    const payload={commercant_id:parseInt(val('o-com')),date_session:val('o-date'),statut:'ouvert'};
+    const act=val('o-act'); if(act) payload.activite_id=parseInt(act);
+    const zone=val('o-zone'); if(zone) payload.zone_observation_id=parseInt(zone);
+    const notes=val('o-notes'); if(notes) payload.notes=notes;
     try {
-      const list=await apiFetch('GET','/sessions/?limit=50');
+      const s=await apiFetch('POST','/sessions/',payload);
+      snack('Session ouverte','Fermer ce soir via l\'onglet "Fermer / recette".','success',6000);
+      resetOuvrir(); refreshSessions(); loadSessionsOuvertes();
+    } catch(e){ snack('Erreur ouverture',e.message,'error'); }
+    finally{ setBtnLoading('btn-ouvrir',false,'<i class="fa-solid fa-sun"></i> Ouvrir la session'); }
+  });
+
+  /* Onglet 2 : FERMER */
+  let sessionsOuvertes=[];
+  async function loadSessionsOuvertes() {
+    const sel=document.getElementById('f-ses'); if(!sel) return;
+    try {
+      const list=await apiFetch('GET','/sessions/?statut=ouvert&limit=100');
+      sessionsOuvertes=list||[];
+      const ph=sel.options[0]; sel.innerHTML=''; sel.appendChild(ph);
+      sessionsOuvertes.forEach(s=>{
+        const label=`${s.commercant?.telephone||'?'}${s.commercant?.nom_commercial?' — '+s.commercant.nom_commercial:''} · ${s.activite?.nom||'?'} · ${dateStr(s.date_session)}`;
+        sel.appendChild(new Option(label,s.id));
+      });
+    } catch(e){ console.warn('sessions ouvertes:',e.message); }
+  }
+  function onSessionSelect() {
+    const sid=parseInt(val('f-ses'));
+    const s=sessionsOuvertes.find(x=>x.id===sid);
+    const strip=document.getElementById('ses-info-strip');
+    if(s){ document.getElementById('si-com').textContent=(s.commercant?.telephone||'')+(s.commercant?.nom_commercial?' — '+s.commercant.nom_commercial:''); document.getElementById('si-act').textContent=s.activite?.nom||'—'; document.getElementById('si-date').textContent=dateStr(s.date_session); strip.style.display='block'; }
+    else strip.style.display='none';
+  }
+  function resetFermer() { document.getElementById('form-fermer').reset(); document.getElementById('ses-info-strip').style.display='none'; }
+
+  document.getElementById('form-fermer').addEventListener('submit', async e => {
+    e.preventDefault();
+    let ok=true;
+    if(!val('f-ses'))     { markError('fg-f-ses');     ok=false; }
+    if(!val('f-recette')) { markError('fg-f-recette'); ok=false; }
+    if(!ok){ snack('Champs manquants','','warn'); return; }
+    setBtnLoading('btn-fermer',true);
+    const sid=parseInt(val('f-ses'));
+    const s=sessionsOuvertes.find(x=>x.id===sid);
+    const payload={statut:'ferme',recette_journaliere:parseFloat(val('f-recette')),score_fiabilite:parseFloat(val('f-fiab'))};
+    try {
+      await apiFetch('PATCH',`/sessions/${sid}`,payload);
+      snack('Session fermée',`CA de « ${s?.activite?.nom||'?'} » mis à jour.`,'success',5000);
+      resetFermer(); refreshSessions(); loadSessionsOuvertes();
+    } catch(e){ snack('Erreur fermeture',e.message,'error'); }
+    finally{ setBtnLoading('btn-fermer',false,'<i class="fa-solid fa-moon"></i> Fermer et enregistrer la recette'); }
+  });
+
+  /* Onglet 3 : A POSTERIORI */
+  document.getElementById('form-post').addEventListener('submit', async e => {
+    e.preventDefault();
+    let ok=true;
+    if(!val('p-com'))     { markError('fg-p-com');     ok=false; }
+    if(!val('p-date'))    { markError('fg-p-date');    ok=false; }
+    if(!val('p-recette')) { markError('fg-p-recette'); ok=false; }
+    if(!ok){ snack('Champs manquants','','warn'); return; }
+    setBtnLoading('btn-post',true);
+    const payload={commercant_id:parseInt(val('p-com')),date_session:val('p-date'),statut:'ferme',recette_journaliere:parseFloat(val('p-recette'))};
+    const act=val('p-act'); if(act) payload.activite_id=parseInt(act);
+    try {
+      await apiFetch('POST','/sessions/',payload);
+      snack('Session enregistrée','CA mis à jour automatiquement.','success');
+      document.getElementById('form-post').reset(); document.getElementById('p-date').value=today();
+      refreshSessions();
+    } catch(e){ snack('Erreur saisie',e.message,'error'); }
+    finally{ setBtnLoading('btn-post',false,'<i class="fa-solid fa-floppy-disk"></i> Enregistrer (fermé)'); }
+  });
+
+  /* Liste sessions récentes */
+  async function refreshSessions(statutFilter) {
+    const div=document.getElementById('sessions-list');
+    div.innerHTML='<div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>';
+    try {
+      let url='/sessions/?limit=50'; if(statutFilter) url+=`&statut=${statutFilter}`;
+      const list=await apiFetch('GET',url);
       if(!list?.length){ div.innerHTML='<div class="tbl-empty">Aucune session</div>'; return; }
       div.innerHTML=list.map(s=>`
         <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)">
@@ -1054,35 +1238,12 @@
             <div style="font-size:11.5px;color:var(--text3);margin-top:2px">${s.activite?.nom||'—'} · ${dateStr(s.date_session)}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)">${s.recette_journaliere!=null?fcfa(s.recette_journaliere)+' F':'—'}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:1px">${s.statut}</div>
+            ${s.recette_journaliere!=null?`<div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)">${fcfa(s.recette_journaliere)} F</div>`:''}
+            <div style="margin-top:2px">${s.statut==='ferme'?'<span class="badge b-green" style="font-size:10px">fermé</span>':s.statut==='ouvert'?'<span class="badge b-amber" style="font-size:10px">ouvert</span>':`<span class="badge b-gray" style="font-size:10px">${s.statut}</span>`}</div>
           </div>
         </div>`).join('');
     } catch(e){ div.innerHTML=`<div class="tbl-empty">Erreur: ${e.message}</div>`; }
   }
-  function resetSession() { document.getElementById('form-session').reset(); document.getElementById('s-date').value=today(); document.getElementById('com-info-strip').style.display='none'; document.getElementById('bloc-recette').style.display='block'; }
-
-  document.getElementById('form-session').addEventListener('submit', async e => {
-    e.preventDefault();
-    let ok=true;
-    if(!val('s-com'))    { markError('fg-s-com');    ok=false; }
-    if(!val('s-date'))   { markError('fg-s-date');   ok=false; }
-    const statut=val('s-statut');
-    if(statut==='ouvert'&&!val('s-recette')) { markError('fg-s-recette'); ok=false; }
-    if(!ok){ snack('Champs manquants','','warn'); return; }
-    setBtnLoading('btn-session',true);
-    const payload = { commercant_id:parseInt(val('s-com')), date_session:val('s-date'), statut };
-    const act=val('s-act'); if(act) payload.activite_id=parseInt(act);
-    const zone=val('s-zone'); if(zone) payload.zone_observation_id=parseInt(zone);
-    if(statut==='ouvert') { payload.recette_journaliere=parseFloat(val('s-recette')); payload.score_fiabilite=parseFloat(val('s-fiab')); }
-    const notes=val('s-notes'); if(notes) payload.notes=notes;
-    try {
-      await apiFetch('POST','/sessions/',payload);
-      snack('Session enregistrée','Recette ajoutée au CA de l\'activité.','success');
-      resetSession(); refreshSessions();
-    } catch(e){ snack('Erreur session',e.message,'error'); }
-    finally{ setBtnLoading('btn-session',false,'<i class="fa-solid fa-floppy-disk"></i> Enregistrer la session'); }
-  });
 
   /* ── RÉFÉRENTIELS ── */
   async function loadReferentiels() {

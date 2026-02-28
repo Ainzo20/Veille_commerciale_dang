@@ -1,12 +1,27 @@
-from datetime import date
+"""
+indicateurs.py — Routes des indicateurs et dashboard
+
+RÈGLE CA FONDAMENTALE
+══════════════════════════════════════════════════════════════
+Seules les sessions statut='ferme' + recette_journaliere NOT NULL comptent.
+  Ouverture matin → CA inchangé
+  Fermeture soir  → CA += recette + recalcul IndicateurActivite automatique
+
+DASHBOARD : données temps-réel
+  ca_semaine, ca_par_categorie → calculés directement sur SessionJournaliere
+  top_activites               → IndicateurActivite (recalculé à chaque fermeture)
+"""
+
+from datetime import date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc
+from sqlalchemy import func, desc
 from app.database import get_db
 from app.models.models import (
     IndicateurActivite, Activite, Commercant, ZoneMarche,
-    Alerte, PeriodeEnum,
+    Alerte, PeriodeEnum, SessionJournaliere, CategorieActivite,
+    StatutSessionEnum,
 )
 from app.schemas.schemas import (
     IndicateurOut, DashboardOut, RecalculerRequest, CaCategorieOut,
@@ -16,45 +31,130 @@ from app.services import calcul_service, alerte_service
 router = APIRouter(prefix="/indicateurs", tags=["Indicateurs & Dashboard"])
 
 
-# ── Dashboard principal ──────────────────────────────────────────
+# ── Helpers directs (bypass IndicateurActivite, toujours frais) ──────────────
+
+def _ca_direct(db: Session, d0: date, d1: date,
+               activite_id: Optional[int] = None) -> Optional[float]:
+    """SUM recettes des sessions FERMÉES sur [d0, d1], optionnellement filtrées par activité."""
+    q = (db.query(func.sum(SessionJournaliere.recette_journaliere))
+         .filter(
+             SessionJournaliere.statut == StatutSessionEnum.FERME,
+             SessionJournaliere.recette_journaliere.isnot(None),
+             SessionJournaliere.date_session >= d0,
+             SessionJournaliere.date_session <= d1,
+         ))
+    if activite_id:
+        q = q.filter(SessionJournaliere.activite_id == activite_id)
+    r = q.scalar()
+    return float(r) if r else None
+
+
+def _ca_categories_direct(db: Session, d0: date, d1: date) -> list[CaCategorieOut]:
+    """CA par catégorie, calculé directement sur sessions FERMÉES."""
+    cats = db.query(CategorieActivite).filter(CategorieActivite.actif == True).all()
+    result = []
+    for cat in cats:
+        r = (db.query(func.sum(SessionJournaliere.recette_journaliere))
+             .join(Activite, SessionJournaliere.activite_id == Activite.id)
+             .filter(
+                 Activite.categorie_id == cat.id,
+                 Activite.actif == True,
+                 SessionJournaliere.statut == StatutSessionEnum.FERME,
+                 SessionJournaliere.recette_journaliere.isnot(None),
+                 SessionJournaliere.date_session >= d0,
+                 SessionJournaliere.date_session <= d1,
+             ).scalar())
+        result.append(CaCategorieOut(
+            categorie_id=cat.id, nom=cat.nom, icone=cat.icone,
+            ca=float(r) if r else 0.0,
+        ))
+    result.sort(key=lambda x: x.ca, reverse=True)
+    return result
+
+
+def _top_activites_direct(db: Session, d0: date, d1: date, limit: int = 5):
+    """
+    Top activités par CA calculé directement (sans IndicateurActivite).
+    Utilisé en fallback si la table indicateurs est vide.
+    """
+    rows = (db.query(
+                Activite.id,
+                Activite.nom,
+                func.sum(SessionJournaliere.recette_journaliere).label('ca'),
+                func.count(func.distinct(SessionJournaliere.commercant_id)).label('nb_com'),
+            )
+            .join(SessionJournaliere, SessionJournaliere.activite_id == Activite.id)
+            .filter(
+                SessionJournaliere.statut == StatutSessionEnum.FERME,
+                SessionJournaliere.recette_journaliere.isnot(None),
+                SessionJournaliere.date_session >= d0,
+                SessionJournaliere.date_session <= d1,
+                Activite.actif == True,
+            )
+            .group_by(Activite.id, Activite.nom)
+            .order_by(desc('ca'))
+            .limit(limit)
+            .all())
+    return rows
+
+
+# ── DASHBOARD ─────────────────────────────────────────────────────────────────
 
 @router.get("/dashboard", response_model=DashboardOut)
 def dashboard(db: Session = Depends(get_db)):
     """
-    Vue d'accueil de l'application mobile.
+    Tableau de bord — toutes les valeurs de CA sont en temps-réel.
 
-    Retourne en un seul appel :
-      - Compteurs globaux (commerçants, activités, zones)
-      - CA global semaine courante vs précédente + tendance
-      - CA ventilé par catégorie (semaine courante)
-      - Top 5 activités du mois courant
-      - 5 dernières alertes non lues
+    Les CA (semaine, catégories) sont calculés directement sur
+    SessionJournaliere à chaque appel — jamais périmés.
+
+    Top activités : depuis IndicateurActivite mis à jour à chaque
+    fermeture de session + fallback recalcul si table vide.
     """
-    nb_com  = db.query(Commercant).filter(Commercant.actif == True).count()
-    nb_act  = db.query(Activite).filter(Activite.actif == True).count()
-    nb_zone = db.query(ZoneMarche).filter(ZoneMarche.actif == True).count()
+    today  = date.today()
+    d_sem0 = calcul_service.debut_semaine(today)
+    d_sem1 = calcul_service.fin_semaine(today)
+    d_pre0 = d_sem0 - timedelta(weeks=1)
+    d_pre1 = d_pre0 + timedelta(days=6)
+    d_mois = calcul_service.debut_mois(today)
 
-    ca_cur  = calcul_service.ca_global_semaine_courante(db)
-    ca_prev = calcul_service.ca_global_semaine_precedente(db)
-    tendance, _ = calcul_service.calculer_tendance(ca_cur, ca_prev)
-
-    # CA par catégorie — semaine courante
-    today = date.today()
-    d0    = calcul_service.debut_semaine(today)
-    d1    = calcul_service.fin_semaine(today)
-    ca_cats = calcul_service.ca_toutes_categories(db, d0, d1)
-
+    # KPIs
+    nb_com     = db.query(Commercant).filter(Commercant.actif == True).count()
+    nb_act     = db.query(Activite).filter(Activite.actif == True).count()
+    nb_zone    = db.query(ZoneMarche).filter(ZoneMarche.actif == True).count()
     nb_alertes = db.query(Alerte).filter(Alerte.lue == False).count()
 
-    d_debut = calcul_service.debut_mois(today)
+    # CA temps-réel
+    ca_cur  = _ca_direct(db, d_sem0, d_sem1)
+    ca_prev = _ca_direct(db, d_pre0, d_pre1)
+    tendance, _ = calcul_service.calculer_tendance(ca_cur, ca_prev)
+
+    # Répartition catégories temps-réel
+    ca_par_cat = _ca_categories_direct(db, d_sem0, d_sem1)
+
+    # Top 5 activités du mois depuis IndicateurActivite
     top5 = (db.query(IndicateurActivite)
             .options(joinedload(IndicateurActivite.activite)
                      .joinedload(Activite.categorie))
             .filter(IndicateurActivite.periode    == PeriodeEnum.MOIS,
-                    IndicateurActivite.date_debut == d_debut,
-                    IndicateurActivite.ca_total.isnot(None))
-            .order_by(desc(IndicateurActivite.ca_total)).limit(5).all())
+                    IndicateurActivite.date_debut == d_mois,
+                    IndicateurActivite.ca_total   >  0)
+            .order_by(desc(IndicateurActivite.ca_total))
+            .limit(5).all())
 
+    # Fallback : si aucun indicateur → recalcul immédiat
+    if not top5:
+        calcul_service.recalculer_tout(db, PeriodeEnum.MOIS)
+        top5 = (db.query(IndicateurActivite)
+                .options(joinedload(IndicateurActivite.activite)
+                         .joinedload(Activite.categorie))
+                .filter(IndicateurActivite.periode    == PeriodeEnum.MOIS,
+                        IndicateurActivite.date_debut == d_mois,
+                        IndicateurActivite.ca_total   >  0)
+                .order_by(desc(IndicateurActivite.ca_total))
+                .limit(5).all())
+
+    # Alertes non lues
     alertes5 = (db.query(Alerte)
                 .options(
                     joinedload(Alerte.activite).joinedload(Activite.categorie),
@@ -64,47 +164,20 @@ def dashboard(db: Session = Depends(get_db)):
                 .order_by(desc(Alerte.created_at)).limit(5).all())
 
     return DashboardOut(
-        nb_commercants_actifs  = nb_com,
-        nb_activites_suivies   = nb_act,
-        nb_zones               = nb_zone,
-        ca_semaine_courante    = ca_cur,
-        ca_semaine_precedente  = ca_prev,
-        tendance_globale       = tendance,
-        ca_par_categorie       = [CaCategorieOut(**c) for c in ca_cats],
-        nb_alertes_non_lues    = nb_alertes,
-        top_activites          = top5,
-        alertes_recentes       = alertes5,
+        nb_commercants_actifs = nb_com,
+        nb_activites_suivies  = nb_act,
+        nb_zones              = nb_zone,
+        ca_semaine_courante   = ca_cur,
+        ca_semaine_precedente = ca_prev,
+        tendance_globale      = tendance,
+        nb_alertes_non_lues   = nb_alertes,
+        ca_par_categorie      = ca_par_cat,
+        top_activites         = top5,
+        alertes_recentes      = alertes5,
     )
 
 
-# ── CA par catégorie (endpoint dédié) ────────────────────────────
-
-@router.get("/ca-categories", response_model=list[CaCategorieOut])
-def ca_categories(
-    periode: PeriodeEnum = PeriodeEnum.SEMAINE,
-    db: Session = Depends(get_db),
-):
-    """
-    CA ventilé par catégorie d'activités pour la période courante.
-
-    Utile pour le graphique camembert / barres de l'app mobile.
-    periode=semaine → semaine ISO en cours
-    periode=mois    → mois calendaire en cours
-    """
-    today = date.today()
-    if periode == PeriodeEnum.MOIS:
-        d0 = calcul_service.debut_mois(today)
-        d1 = calcul_service.fin_mois(today)
-    elif periode == PeriodeEnum.SEMAINE:
-        d0 = calcul_service.debut_semaine(today)
-        d1 = calcul_service.fin_semaine(today)
-    else:  # JOUR
-        d0 = d1 = today
-
-    return [CaCategorieOut(**c) for c in calcul_service.ca_toutes_categories(db, d0, d1)]
-
-
-# ── Historique d'une activité ────────────────────────────────────
+# ── HISTORIQUE ACTIVITÉ ───────────────────────────────────────────────────────
 
 @router.get("/activite/{aid}", response_model=list[IndicateurOut])
 def historique_activite(
@@ -113,16 +186,14 @@ def historique_activite(
     limit: int = Query(12, ge=1, le=52),
     db: Session = Depends(get_db),
 ):
-    """Historique N périodes pour le graphique d'évolution mobile."""
     return (db.query(IndicateurActivite)
-            .options(joinedload(IndicateurActivite.activite)
-                     .joinedload(Activite.categorie))
+            .options(joinedload(IndicateurActivite.activite).joinedload(Activite.categorie))
             .filter(IndicateurActivite.activite_id == aid,
                     IndicateurActivite.periode     == periode)
             .order_by(desc(IndicateurActivite.date_debut)).limit(limit).all())
 
 
-# ── Top activités ────────────────────────────────────────────────
+# ── TOP ACTIVITÉS ─────────────────────────────────────────────────────────────
 
 @router.get("/top-activites", response_model=list[IndicateurOut])
 def top_activites(
@@ -130,45 +201,61 @@ def top_activites(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
-    """Top N activités par CA sur la période courante."""
     today = date.today()
-    if periode == PeriodeEnum.MOIS:
-        d = calcul_service.debut_mois(today)
-    elif periode == PeriodeEnum.SEMAINE:
-        d = calcul_service.debut_semaine(today)
-    else:
-        d = today
-
-    return (db.query(IndicateurActivite)
-            .options(joinedload(IndicateurActivite.activite)
-                     .joinedload(Activite.categorie))
-            .filter(IndicateurActivite.periode    == periode,
+    d = (calcul_service.debut_mois(today)     if periode == PeriodeEnum.MOIS
+         else calcul_service.debut_semaine(today) if periode == PeriodeEnum.SEMAINE
+         else today)
+    rows = (db.query(IndicateurActivite)
+            .options(joinedload(IndicateurActivite.activite).joinedload(Activite.categorie))
+            .filter(IndicateurActivite.periode == periode,
                     IndicateurActivite.date_debut == d,
-                    IndicateurActivite.ca_total.isnot(None))
+                    IndicateurActivite.ca_total > 0)
             .order_by(desc(IndicateurActivite.ca_total)).limit(limit).all())
+    if not rows:
+        calcul_service.recalculer_tout(db, periode)
+        rows = (db.query(IndicateurActivite)
+                .options(joinedload(IndicateurActivite.activite).joinedload(Activite.categorie))
+                .filter(IndicateurActivite.periode == periode,
+                        IndicateurActivite.date_debut == d,
+                        IndicateurActivite.ca_total > 0)
+                .order_by(desc(IndicateurActivite.ca_total)).limit(limit).all())
+    return rows
 
 
-# ── Recalcul ─────────────────────────────────────────────────────
+# ── CA CATÉGORIES ─────────────────────────────────────────────────────────────
+
+@router.get("/ca-categories")
+def ca_categories(
+    periode: str = "semaine",
+    db: Session = Depends(get_db),
+):
+    today = date.today()
+    if periode == "mois":
+        d0, d1 = calcul_service.debut_mois(today), calcul_service.fin_mois(today)
+    elif periode == "jour":
+        d0, d1 = today, today
+    else:
+        d0, d1 = calcul_service.debut_semaine(today), calcul_service.fin_semaine(today)
+    return _ca_categories_direct(db, d0, d1)
+
+
+# ── RECALCUL MANUEL ───────────────────────────────────────────────────────────
 
 @router.post("/recalculer")
 async def recalculer(
-    payload: Optional[RecalculerRequest] = None,
+    payload: RecalculerRequest = None,
     db: Session = Depends(get_db),
 ):
     """
-    Recalcule les indicateurs + vérifie les alertes.
-    Sans corps = recalcul global (toutes activités, toutes périodes).
+    Force recalcul des indicateurs.
+    Normalement déclenché auto à chaque fermeture de session.
+    Utile pour corriger des données ou initialiser la base.
     """
     if payload and payload.activite_id:
         periodes = [payload.periode] if payload.periode else list(PeriodeEnum)
-        count = 0
-        for p in periodes:
-            calcul_service.recalculer_indicateur(db, payload.activite_id, p)
-            count += 1
+        count = sum(1 for p in periodes
+                    for _ in [calcul_service.recalculer_indicateur(db, payload.activite_id, p)])
     else:
-        count = calcul_service.recalculer_tout(
-            db, payload.periode if payload else None
-        )
-
-    alertes_creees = await alerte_service.run_verifications_globales(db)
-    return {"indicateurs_recalcules": count, "alertes_creees": alertes_creees}
+        count = calcul_service.recalculer_tout(db, payload.periode if payload else None)
+    res = await alerte_service.run_verifications_globales(db)
+    return {"indicateurs_recalcules": count, "alertes_creees": res}
