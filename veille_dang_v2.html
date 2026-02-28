@@ -1109,7 +1109,7 @@
               <!-- Input for Category Icon -->
               <div class="form-row">
                 <div class="form-group" id="fg-cat-icon">
-                  <label class="form-label">Icône (Font Awesome) <span class="req"></span></label>
+                  <label class="form-label">Icône (Font Awesome) <span class=""></span></label>
                   <div class="input-wrap">
                     <i class="iico fa-solid fa-icons"></i>
                     <input class="form-input" type="text" id="cat-icon" required placeholder="ex : fa-utensils, fa-tshirt…" />
@@ -2134,7 +2134,38 @@
     document.getElementById('bloc-ambulant').classList.remove('visible');
     clearErrors('form-com');
   }
+  /* Soumission formulaire catégorie */
+  document.getElementById('form-category').addEventListener('submit', async e => {
+    e.preventDefault();
+    clearErrors('form-category');
 
+    let ok = true;
+    if (!val('cat-nom'))  { markError('fg-cat-nom');  ok = false; }
+    if (!val('cat-desc')) { markError('fg-cat-desc'); ok = false; }
+
+    if (!ok) {
+      snack('Champs manquants', 'Tous les champs sont obligatoires.', 'warn');
+      return;
+    }
+
+    setBtnLoading('btn-category', true);
+
+    const payload = {
+      nom: val('cat-nom').trim(),
+      description: val('cat-desc').trim(),
+    };
+
+    try {
+      const created = await apiFetch('POST', '/categories/', payload); // POST request here
+      snack('Catégorie créée', `« ${created.nom} » enregistrée avec succès.`, 'success');
+      resetCategory();
+      await loadRefs(); // Rafraîchir les catégories
+    } catch (e) {
+      snack('Erreur création catégorie', e.message, 'error');
+    } finally {
+      setBtnLoading('btn-category', false, '<i class="fa-solid fa-folder-plus"></i> Enregistrer la catégorie');
+    }
+  });
   /* Soumission formulaire activité */
   document.getElementById('form-act').addEventListener('submit', async e => {
     e.preventDefault();

@@ -1,11 +1,5 @@
 """
 schemas.py — Pydantic v2 — Veille Marché Dang
-
-Conventions :
-    XxxCreate  → corps POST (entrée)
-    XxxUpdate  → corps PATCH (champs optionnels)
-    XxxOut     → réponse complète
-    XxxSummary → version allégée pour les objets imbriqués dans les listes
 """
 
 from __future__ import annotations
@@ -66,12 +60,12 @@ class ActiviteOut(OrmBase):
     categorie:                 CategorieSummary
     mots_cles:                 Optional[str]
     date_premiere_observation: date
-    # CA cumulé total de l'activité : SUM des recette_journaliere des sessions
-    # ouvertes liées à cette activité — toutes dates, tous commerçants confondus.
-    # Calculé par Activite.ca_total (hybrid_property), jamais stocké en colonne.
-    ca_total:  float
-    actif:     bool
-    created_at: datetime
+    # CA cumulé total : SUM des recette_journaliere de toutes les sessions
+    # ouvertes liées à cette activité, sur toutes les dates.
+    # Calculé dynamiquement (hybrid_property), pas stocké en colonne.
+    ca_total:                  float
+    actif:                     bool
+    created_at:                datetime
 
 
 # ── ZONE ─────────────────────────────────────────────────────────
@@ -106,7 +100,7 @@ class CommercantCreate(OrmBase):
     telephone:          str              = Field(..., min_length=8, max_length=20)
     nom_commercial:     Optional[str]   = Field(None, max_length=150)
     type_presence:      TypePresenceEnum = TypePresenceEnum.SEDENTAIRE
-    zones_circuit:      Optional[str]   = None   # JSON list en texte
+    zones_circuit:      Optional[str]   = None
     point_depart:       Optional[str]   = Field(None, max_length=200)
     date_premiere_obs:  date
     notes:              Optional[str]   = None
@@ -145,8 +139,27 @@ class CommercantOut(OrmBase):
 # ── SESSION JOURNALIÈRE ───────────────────────────────────────────
 
 class SessionCreate(OrmBase):
+    """
+    Corps du POST /sessions/.
+
+    activite_id est OPTIONNEL :
+      - Si absent → le router le déduit automatiquement de
+        Commercant.activite_id (cas courant, 95% des saisies).
+      - Si fourni → permet à un semi-sédentaire de déclarer une
+        activité différente de son activité principale ce jour-là.
+
+    La recette_journaliere est le TOTAL FCFA de la journée entière
+    de ce commerçant (bilan global, pas une transaction unitaire).
+
+    Exemples de saisie :
+      Lundi   → {commercant_id:1, date_session:"2025-07-14", recette_journaliere:15000}
+      Mardi   → {commercant_id:1, date_session:"2025-07-15", recette_journaliere:12000}
+      Mercredi→ {commercant_id:1, date_session:"2025-07-16", recette_journaliere:18000}
+    Ces 3 sessions génèrent un CA de 45 000 FCFA pour l'activité sur la semaine.
+    """
     commercant_id:       int
-    activite_id:         int
+    # activite_id optionnel : déduit de commercant.activite_id si absent
+    activite_id:         Optional[int]     = None
     zone_observation_id: Optional[int]     = None
     date_session:        date
     statut:              StatutSessionEnum = StatutSessionEnum.OUVERT
@@ -157,9 +170,14 @@ class SessionCreate(OrmBase):
     @model_validator(mode="after")
     def check_recette(self) -> "SessionCreate":
         if self.statut == StatutSessionEnum.OUVERT and self.recette_journaliere is None:
-            raise ValueError("recette_journaliere est obligatoire quand statut=ouvert.")
+            raise ValueError(
+                "recette_journaliere est obligatoire quand statut=ouvert. "
+                "Saisissez le total FCFA déclaré par le commerçant pour la journée."
+            )
         if self.statut != StatutSessionEnum.OUVERT and self.recette_journaliere is not None:
-            raise ValueError("recette_journaliere doit être null si commerçant absent ou fermé.")
+            raise ValueError(
+                "recette_journaliere doit être null si le commerçant est absent ou fermé."
+            )
         return self
 
 class SessionUpdate(OrmBase):
@@ -174,11 +192,16 @@ class SessionSummary(OrmBase):
     statut: StatutSessionEnum; recette_journaliere: Optional[float]
 
 class SessionOut(OrmBase):
-    id: int; commercant: CommercantSummary; activite: ActiviteSummary
-    zone_observation: Optional[ZoneSummary]
-    date_session: date; statut: StatutSessionEnum
+    id:                  int
+    commercant:          CommercantSummary
+    activite:            ActiviteSummary
+    zone_observation:    Optional[ZoneSummary]
+    date_session:        date
+    statut:              StatutSessionEnum
     recette_journaliere: Optional[float]
-    score_fiabilite: float; notes: Optional[str]; created_at: datetime
+    score_fiabilite:     float
+    notes:               Optional[str]
+    created_at:          datetime
 
 
 # ── INDICATEUR ───────────────────────────────────────────────────
@@ -186,10 +209,15 @@ class SessionOut(OrmBase):
 class IndicateurOut(OrmBase):
     id: int; activite: ActiviteSummary; periode: PeriodeEnum
     date_debut: date; date_fin: date
-    ca_total: Optional[float]; nb_commercants: Optional[int]
+    # ca_total = SUM des recettes de toutes les sessions ouvertes
+    # de cette activité entre date_debut et date_fin inclus.
+    # Plusieurs commerçants × plusieurs jours.
+    ca_total:          Optional[float]
+    nb_commercants:    Optional[int]
     taux_presence_moy: Optional[float]
-    tendance: Optional[TendanceEnum]; ecart_pct: Optional[float]
-    calculated_at: datetime
+    tendance:          Optional[TendanceEnum]
+    ecart_pct:         Optional[float]
+    calculated_at:     datetime
 
 class RecalculerRequest(OrmBase):
     activite_id: Optional[int]         = None
@@ -233,11 +261,11 @@ class RechercheOut(OrmBase):
 # ── RECHERCHE FULL-TEXT ───────────────────────────────────────────
 
 class ResultatRecherche(OrmBase):
-    type:       str            # "activite" | "commercant" | "zone"
+    type:       str
     id:         int
     label:      str
     sous_label: Optional[str]
-    score:      float          # pertinence 0.0–1.0
+    score:      float
 
 class ReponseRecherche(OrmBase):
     query:        str
@@ -248,15 +276,11 @@ class ReponseRecherche(OrmBase):
 # ── CA PAR CATÉGORIE ──────────────────────────────────────────────
 
 class CaCategorieOut(OrmBase):
-    """
-    CA d'une catégorie d'activités sur une période donnée.
-    Calculé par calcul_service.ca_toutes_categories().
-    Exposé dans GET /indicateurs/dashboard et GET /indicateurs/ca-categories.
-    """
+    """CA d'une catégorie sur une période — calculé à la demande."""
     categorie_id: int
     nom:          str
     icone:        Optional[str]
-    ca:           float   # FCFA, 0.0 si aucune session sur la période
+    ca:           float
 
 
 # ── DASHBOARD ─────────────────────────────────────────────────────
@@ -265,11 +289,9 @@ class DashboardOut(OrmBase):
     nb_commercants_actifs:  int
     nb_activites_suivies:   int
     nb_zones:               int
-    # CA global du marché
     ca_semaine_courante:    Optional[float]
     ca_semaine_precedente:  Optional[float]
     tendance_globale:       Optional[TendanceEnum]
-    # CA ventilé par catégorie (semaine courante)
     ca_par_categorie:       list[CaCategorieOut]
     nb_alertes_non_lues:    int
     top_activites:          list[IndicateurOut]
