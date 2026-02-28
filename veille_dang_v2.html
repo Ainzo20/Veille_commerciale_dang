@@ -4,16 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Veille Marché Dang — Backoffice</title>
-
-  <!-- Polices : Playfair Display (titres) + DM Sans (corps) + DM Mono (chiffres) -->
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <!-- Font Awesome 6 — toutes les icônes -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
   <style>
-    /* ================================================================
-       VARIABLES — palette dark brun/charbon + or, identique v1
-    ================================================================ */
     :root {
       --bg:        #0f0e0c;
       --bg2:       #181611;
@@ -22,2470 +15,1403 @@
       --surface2:  #332f27;
       --border:    #3a352c;
       --border2:   #4a4438;
-
       --gold:      #d4a843;
       --gold-dim:  #a07c28;
       --gold-glow: rgba(212,168,67,.14);
       --gold-glow2:rgba(212,168,67,.08);
-
       --green:     #5a9e6f;
       --red:       #c85a4a;
       --amber:     #e8914a;
       --blue:      #5a8ec8;
-
+      --purple:    #9b72cf;
       --text:      #ede8df;
       --text2:     #b0a590;
       --text3:     #6e6555;
-
       --r:         8px;
       --r-lg:      14px;
       --shadow:    0 4px 20px rgba(0,0,0,.5);
       --shadow-lg: 0 8px 40px rgba(0,0,0,.7);
-
       --sidebar-w: 248px;
     }
-
-    /* ================================================================
-       RESET & BASE
-    ================================================================ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ================================================================
-       SNACKBAR — notifications système (bas-droite, slide-in)
-    ================================================================ */
-    #snack-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: none;
-    }
-
-    .snack {
-      pointer-events: all;
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      min-width: 300px;
-      max-width: 380px;
-      background: var(--bg2);
-      border: 1px solid var(--border2);
-      border-left-width: 3px;
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow-lg);
-      padding: 13px 15px;
-      animation: snackIn .28s cubic-bezier(.34,1.56,.64,1) forwards;
-      transition: opacity .25s, transform .25s;
-    }
-
-    /* Couleur de l'accent gauche selon type */
-    .snack.success { border-left-color: var(--green); }
-    .snack.error   { border-left-color: var(--red); }
-    .snack.warn    { border-left-color: var(--amber); }
-    .snack.info    { border-left-color: var(--gold); }
-
-    .snack-icon-wrap {
-      width: 28px; height: 28px; flex-shrink: 0;
-      border-radius: 7px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-    }
-    .snack.success .snack-icon-wrap { background: rgba(90,158,111,.15); color: var(--green); }
-    .snack.error   .snack-icon-wrap { background: rgba(200,90,74,.15);  color: var(--red); }
-    .snack.warn    .snack-icon-wrap { background: rgba(232,145,74,.15); color: var(--amber); }
-    .snack.info    .snack-icon-wrap { background: var(--gold-glow);     color: var(--gold); }
-
-    .snack-body { flex: 1; min-width: 0; }
-    .snack-title {
-      font-size: 13px; font-weight: 600; color: var(--text);
-      margin-bottom: 2px;
-    }
-    .snack-msg { font-size: 12px; color: var(--text2); line-height: 1.4; }
-
-    .snack-close {
-      background: none; border: none; cursor: pointer;
-      color: var(--text3); font-size: 11px; padding: 2px;
-      flex-shrink: 0; line-height: 1; margin-top: 1px;
-      transition: color .15s;
-    }
-    .snack-close:hover { color: var(--text); }
-
-    .snack.out { opacity: 0; transform: translateX(20px); }
-
-    @keyframes snackIn {
-      from { opacity: 0; transform: translateX(24px); }
-      to   { opacity: 1; transform: translateX(0); }
-    }
-
-    /* ================================================================
-       LAYOUT — sidebar fixe + main scrollable
-    ================================================================ */
-    .app { display: flex; min-height: 100vh; }
-
-    /* ── SIDEBAR ── */
-    .sidebar {
-      width: var(--sidebar-w);
-      min-height: 100vh;
-      background: var(--bg2);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      z-index: 200;
-      overflow-y: auto;
-    }
-
-    .sidebar-head {
-      padding: 22px 18px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .brand-logo {
-      width: 34px; height: 34px;
-      background: var(--gold-glow);
-      border: 1px solid rgba(212,168,67,.22);
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; color: var(--gold);
-      margin-bottom: 10px;
-    }
-
-    .brand-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 16px;
-      font-weight: 900;
-      color: var(--gold);
-      letter-spacing: -.2px;
-      line-height: 1.2;
-    }
-
-    .brand-sub {
-      font-size: 10.5px;
-      color: var(--text3);
-      margin-top: 2px;
-      letter-spacing: .4px;
-      text-transform: uppercase;
-    }
-
-    /* Indicateur statut API dans la sidebar */
-    .api-row {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      margin-top: 13px;
-      padding: 7px 10px;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-    }
-
-    .status-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--text3);
-      flex-shrink: 0;
-      transition: background .3s, box-shadow .3s;
-    }
-    .status-dot.ok  { background: var(--green); box-shadow: 0 0 6px rgba(90,158,111,.5); }
-    .status-dot.err { background: var(--red); }
-
-    .api-label {
-      font-size: 11px;
-      color: var(--text3);
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* ── NAVIGATION ── */
-    .nav { padding: 10px 0; flex: 1; }
-
-    .nav-section-label {
-      font-size: 9.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text3);
-      padding: 10px 18px 4px;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 9px 12px 9px 18px;
-      margin: 1px 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text2);
-      border: none;
-      background: none;
-      width: calc(100% - 16px);
-      text-align: left;
-      transition: all .15s;
-      position: relative;
-    }
-
-    .nav-item .nav-icon {
-      width: 16px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--text3);
-      flex-shrink: 0;
-      transition: color .15s;
-    }
-
-    .nav-item:hover { background: var(--bg3); color: var(--text); }
-    .nav-item:hover .nav-icon { color: var(--text2); }
-
-    .nav-item.active {
-      background: var(--gold-glow);
-      color: var(--gold);
-      border: 1px solid rgba(212,168,67,.18);
-    }
-    .nav-item.active .nav-icon { color: var(--gold); }
-
-    /* Badge compteur dans la nav */
-    .nav-badge {
-      margin-left: auto;
-      background: var(--red);
-      color: #fff;
-      font-size: 9.5px;
-      font-weight: 700;
-      padding: 1px 6px;
-      border-radius: 99px;
-      min-width: 18px;
-      text-align: center;
-    }
-    .nav-badge.zero { background: var(--surface2); color: var(--text3); }
-
-    .sidebar-footer {
-      padding: 14px 18px;
-      border-top: 1px solid var(--border);
-      font-size: 11px;
-      color: var(--text3);
-      line-height: 1.5;
-    }
-
-    /* ── MAIN CONTENT ── */
-    .main {
-      margin-left: var(--sidebar-w);
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    /* Topbar fixe en haut du contenu */
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 13px 28px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg2);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .topbar-left { display: flex; align-items: center; gap: 14px; }
-
-    .topbar-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 19px;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .topbar-sub {
-      font-size: 12px;
-      color: var(--text3);
-      margin-top: 1px;
-    }
-
-    .topbar-right { display: flex; align-items: center; gap: 8px; }
-
-    /* Zone de contenu scrollable */
-    .content { padding: 26px 28px; flex: 1; }
-
-    /* ================================================================
-       PAGES — affichage/masquage
-    ================================================================ */
-    .page { display: none; }
-    .page.active {
-      display: block;
-      animation: fadeUp .2s ease;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: none; }
-    }
-
-    /* ================================================================
-       GRILLES
-    ================================================================ */
-    .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 18px; }
-    .grid-2r { display: grid; grid-template-columns: 2fr 1fr; gap: 22px; }
-    .grid-2l { display: grid; grid-template-columns: 1fr 2fr; gap: 22px; }
-
-    @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 900px)  { .grid-3 { grid-template-columns: repeat(2,1fr); } }
-    @media (max-width: 720px)  {
-      .grid-4,.grid-3,.grid-2,.grid-2r,.grid-2l { grid-template-columns: 1fr; }
-      .main { margin-left: 0; }
-      .sidebar { transform: translateX(-100%); }
-      .content { padding: 16px; }
-      .topbar { padding: 11px 16px; }
-    }
-
-    /* ================================================================
-       CARTES GÉNÉRIQUES
-    ================================================================ */
-    .card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .card-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 15px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg3);
-    }
-
-    .card-head-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .card-head-title i { font-size: 12px; color: var(--gold); }
-
-    .card-body { padding: 20px; }
-    .card-body-flush { /* pas de padding — pour les tableaux */ }
-
-    /* ================================================================
-       STAT CARDS (KPI dashboard)
-    ================================================================ */
-    .stat-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      padding: 18px 20px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color .2s, transform .2s;
-    }
-    .stat-card:hover { transform: translateY(-2px); border-color: var(--border2); }
-
-    /* Cercle décoratif en bas à droite */
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      bottom: -28px; right: -28px;
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      opacity: .07;
-    }
-    .stat-card.gold::after  { background: var(--gold); }
-    .stat-card.green::after { background: var(--green); }
-    .stat-card.red::after   { background: var(--red); }
-    .stat-card.amber::after { background: var(--amber); }
-
-    .stat-icon {
-      width: 34px; height: 34px;
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 13px;
-      margin-bottom: 13px;
-    }
-    .stat-card.gold  .stat-icon { background: rgba(212,168,67,.14); color: var(--gold);  }
-    .stat-card.green .stat-icon { background: rgba(90,158,111,.14); color: var(--green); }
-    .stat-card.red   .stat-icon { background: rgba(200,90,74,.14);  color: var(--red);   }
-    .stat-card.amber .stat-icon { background: rgba(232,145,74,.14); color: var(--amber); }
-
-    .stat-label {
-      font-size: 10.5px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .5px;
-      color: var(--text3);
-    }
-    .stat-value {
-      font-family: 'Playfair Display', serif;
-      font-size: 30px; font-weight: 700;
-      line-height: 1.1; margin-top: 3px;
-    }
-    .stat-card.gold  .stat-value { color: var(--gold);  }
-    .stat-card.green .stat-value { color: var(--green); }
-    .stat-card.red   .stat-value { color: var(--red);   }
-    .stat-card.amber .stat-value { color: var(--amber); }
-    .stat-sub { font-size: 11.5px; color: var(--text3); margin-top: 3px; }
-
-    /* ================================================================
-       TABLEAUX
-    ================================================================ */
-    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-
-    .tbl th {
-      text-align: left;
-      padding: 9px 14px;
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .6px;
-      color: var(--text3);
-      border-bottom: 1px solid var(--border);
-      background: var(--bg3);
-      white-space: nowrap;
-    }
-
-    .tbl td {
-      padding: 11px 14px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-      color: var(--text2);
-    }
-    .tbl tr:last-child td { border-bottom: none; }
-    .tbl tr:hover td     { background: var(--surface); }
-
-    .tbl .mono { font-family: 'DM Mono', monospace; }
-    .tbl .gold  { color: var(--gold);  font-weight: 600; }
-    .tbl .green { color: var(--green); }
-    .tbl .dim   { color: var(--text3); font-size: 11.5px; }
-    .tbl .strong { color: var(--text); font-weight: 600; }
-
-    .tbl-empty {
-      text-align: center;
-      padding: 36px 20px;
-      color: var(--text3);
-      font-size: 13px;
-    }
-    .tbl-empty i { display: block; font-size: 22px; margin-bottom: 8px; opacity: .4; }
-
-    /* Colonne actions à droite */
-    .tbl td.td-actions { text-align: right; white-space: nowrap; }
-
-    /* ================================================================
-       BADGES
-    ================================================================ */
-    .badge {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-size: 10px; font-weight: 700;
-      padding: 2px 8px; border-radius: 20px;
-      text-transform: uppercase; letter-spacing: .3px;
-    }
-    .b-gold   { background: rgba(212,168,67,.15); color: var(--gold);  }
-    .b-green  { background: rgba(90,158,111,.15); color: var(--green); }
-    .b-red    { background: rgba(200,90,74,.15);  color: var(--red);   }
-    .b-amber  { background: rgba(232,145,74,.15); color: var(--amber); }
-    .b-blue   { background: rgba(90,142,200,.15); color: var(--blue);  }
-    .b-gray   { background: var(--surface2);      color: var(--text3); }
-
-    /* ================================================================
-       BOUTONS
-    ================================================================ */
-    .btn {
-      display: inline-flex; align-items: center; gap: 7px;
-      padding: 8px 16px; border-radius: 8px;
-      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
-      cursor: pointer; border: none;
-      transition: all .15s; text-decoration: none;
-      white-space: nowrap;
-    }
-    .btn i { font-size: 11px; }
-    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
-
-    .btn-primary {
-      background: var(--gold); color: #1a1508;
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: #e5b850; transform: translateY(-1px);
-      box-shadow: 0 4px 14px rgba(212,168,67,.28);
-    }
-
-    .btn-secondary {
-      background: var(--surface); color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-secondary:hover:not(:disabled) {
-      background: var(--surface2); border-color: var(--border2);
-    }
-
-    .btn-ghost {
-      background: transparent; color: var(--text2);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover:not(:disabled) { background: var(--surface); color: var(--text); }
-
-    .btn-danger {
-      background: rgba(200,90,74,.1); color: var(--red);
-      border: 1px solid rgba(200,90,74,.25);
-    }
-    .btn-danger:hover:not(:disabled) { background: rgba(200,90,74,.2); }
-
-    .btn-success {
-      background: rgba(90,158,111,.1); color: var(--green);
-      border: 1px solid rgba(90,158,111,.25);
-    }
-    .btn-success:hover:not(:disabled) { background: rgba(90,158,111,.2); }
-
-    .btn-sm  { padding: 5px 11px; font-size: 11.5px; border-radius: 7px; }
-    .btn-lg  { padding: 11px 24px; font-size: 14.5px; border-radius: 10px; }
-    .btn-full { width: 100%; justify-content: center; }
-
-    /* ================================================================
-       FORMULAIRES
-    ================================================================ */
-
-    /* Section de formulaire avec titre */
-    .form-section {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-lg);
-      overflow: hidden;
-      margin-bottom: 18px;
-    }
-
-    .form-section-head {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg3);
-    }
-
-    .form-section-head i { font-size: 12px; color: var(--gold); }
-
-    .form-section-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 14px; font-weight: 700;
-      color: var(--text);
-      flex: 1;
-    }
-
-    /* Petit tag optionnel/requis à droite du titre section */
-    .form-section-tag {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .4px; padding: 2px 8px; border-radius: 20px;
-    }
-    .form-section-tag.required { background: rgba(200,90,74,.12); color: var(--red); border: 1px solid rgba(200,90,74,.2); }
-    .form-section-tag.optional { background: var(--surface); color: var(--text3); border: 1px solid var(--border); }
-    .form-section-tag.info     { background: var(--gold-glow); color: var(--gold); border: 1px solid rgba(212,168,67,.2); }
-
-    .form-section-body { padding: 20px; }
-
-    /* Bloc conditionnel ambulant */
-    .cond-block {
-      background: var(--bg3);
-      border: 1px solid var(--border2);
-      border-radius: var(--r);
-      padding: 16px;
-      margin-top: 14px;
-      display: none;
-    }
-    .cond-block.visible { display: block; animation: fadeUp .18s ease; }
-    .cond-block-label {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .6px; color: var(--amber); margin-bottom: 13px;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .cond-block-label i { font-size: 10px; }
-
-    /* Grilles de formulaire */
-    .form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .form-row3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .form-row1  { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 14px; }
-    .form-row:last-child, .form-row3:last-child, .form-row1:last-child { margin-bottom: 0; }
-
-    @media (max-width: 720px) { .form-row, .form-row3 { grid-template-columns: 1fr; } }
-
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group.full { grid-column: 1 / -1; }
-
-    .form-label {
-      font-size: 10.5px; font-weight: 700;
-      color: var(--text3);
-      text-transform: uppercase; letter-spacing: .5px;
-      display: flex; align-items: center; gap: 5px;
-    }
-    .form-label .req { color: var(--red); font-size: 13px; line-height: 1; }
-
-    /* Wrapper avec icône à gauche */
-    .input-wrap { position: relative; }
-    .input-wrap .iico {
-      position: absolute; left: 11px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 11px; color: var(--text3); pointer-events: none;
-    }
-    .input-wrap .form-input { padding-left: 30px; }
-
-    /* Select avec flèche custom */
-    .select-wrap { position: relative; }
-    .select-wrap::after {
-      content: '\f078';
-      font-family: 'Font Awesome 6 Free'; font-weight: 900;
-      position: absolute; right: 11px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 9px; color: var(--text3); pointer-events: none;
-    }
-    .select-wrap .form-select { padding-right: 28px; }
-
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* SNACKBAR */
+    #snack-container { position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none; }
+    .snack { pointer-events:all;display:flex;align-items:flex-start;gap:12px;min-width:300px;max-width:380px;padding:14px 16px;border-radius:var(--r-lg);border:1px solid var(--border2);background:var(--surface);box-shadow:var(--shadow-lg);animation:snackIn .28s cubic-bezier(.22,1,.36,1);transition:opacity .2s,transform .2s; }
+    .snack.out { opacity:0;transform:translateX(20px); }
+    @keyframes snackIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:none} }
+    .snack-ico { width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;margin-top:1px; }
+    .snack.success .snack-ico { background:rgba(90,158,111,.18);color:var(--green); }
+    .snack.error   .snack-ico { background:rgba(200,90,74,.18); color:var(--red); }
+    .snack.warn    .snack-ico { background:rgba(232,145,74,.18);color:var(--amber); }
+    .snack.info    .snack-ico { background:rgba(90,142,200,.18);color:var(--blue); }
+    .snack-content { flex:1;min-width:0; }
+    .snack-title { font-size:13.5px;font-weight:600;line-height:1.35;color:var(--text); }
+    .snack-msg { font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5; }
+    .snack-close { background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px;flex-shrink:0;transition:color .15s; }
+    .snack-close:hover { color:var(--text); }
+
+    /* MODAL */
+    .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);z-index:8000;align-items:center;justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-lg);width:90%;max-width:520px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:modalIn .25s cubic-bezier(.22,1,.36,1); }
+    @keyframes modalIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:none} }
+    .modal-head { display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border); }
+    .modal-title { font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--gold); }
+    .modal-close { background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:background .15s,color .15s; }
+    .modal-close:hover { background:var(--surface);color:var(--text); }
+    .modal-body { padding:20px 24px 24px; }
+
+    /* DETAIL PANEL (slide from right) */
+    .detail-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:7000; }
+    .detail-overlay.open { display:block; }
+    .detail-panel { position:fixed;top:0;right:0;width:520px;max-width:95vw;height:100vh;background:var(--bg2);border-left:1px solid var(--border2);box-shadow:var(--shadow-lg);z-index:7001;overflow-y:auto;transform:translateX(100%);transition:transform .3s cubic-bezier(.22,1,.36,1); }
+    .detail-panel.open { transform:none; }
+    .detail-head { display:flex;align-items:flex-start;justify-content:space-between;padding:24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:2; }
+    .detail-head-left h2 { font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--text);line-height:1.3; }
+    .detail-head-left .detail-sub { font-size:12px;color:var(--text3);margin-top:4px; }
+    .detail-close { background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:6px;transition:background .15s;flex-shrink:0; }
+    .detail-close:hover { background:var(--surface);color:var(--text); }
+    .detail-body { padding:20px 24px 40px; }
+    .detail-kpis { display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px; }
+    .dkpi { background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px; }
+    .dkpi-label { font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px; }
+    .dkpi-val { font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--gold); }
+    .dkpi-sub { font-size:10px;color:var(--text3);margin-top:2px; }
+    .detail-section { margin-bottom:18px; }
+    .detail-section-title { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold-dim);margin-bottom:10px;display:flex;align-items:center;gap:6px; }
+    .com-row { display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);margin-bottom:6px; }
+    .com-avatar { width:32px;height:32px;border-radius:50%;background:var(--gold-glow);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--gold);flex-shrink:0; }
+    .com-info { flex:1;min-width:0; }
+    .com-name { font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .com-meta { font-size:11px;color:var(--text3);margin-top:1px; }
+    .com-stats { text-align:right;flex-shrink:0; }
+    .com-ca { font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:500; }
+    .com-ses { font-size:11px;color:var(--text3); }
+    .sess-row { display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;border-bottom:1px solid var(--border); }
+    .sess-row:last-child { border-bottom:none; }
+    .sess-date { font-size:12px;font-weight:600;color:var(--text2);width:90px;flex-shrink:0; }
+    .sess-who { font-size:12px;color:var(--text3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .sess-amt { font-family:'DM Mono',monospace;font-size:12.5px;color:var(--gold);font-weight:500;flex-shrink:0; }
+
+    /* APP LAYOUT */
+    .app { display:flex;min-height:100vh; }
+
+    /* SIDEBAR */
+    .sidebar { width:var(--sidebar-w);min-height:100vh;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100; }
+    .sidebar-logo { padding:22px 20px 18px;border-bottom:1px solid var(--border); }
+    .logo-main { font-family:'Playfair Display',serif;font-size:18px;font-weight:900;color:var(--gold);line-height:1.2; }
+    .logo-sub { font-size:10.5px;color:var(--text3);letter-spacing:.4px;margin-top:3px; }
+    .api-row { display:flex;align-items:center;gap:8px;padding:10px 20px;border-bottom:1px solid var(--border); }
+    .status-dot { width:8px;height:8px;border-radius:50%;background:var(--text3);transition:background .3s; }
+    .status-dot.ok  { background:var(--green);box-shadow:0 0 6px rgba(90,158,111,.5); }
+    .status-dot.err { background:var(--red); }
+    .api-label { font-size:11px;color:var(--text3); }
+    .nav { flex:1;padding:10px 0;overflow-y:auto; }
+    .nav-section-label { padding:12px 20px 5px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3); }
+    .nav-item { width:100%;display:flex;align-items:center;gap:10px;padding:9px 20px;background:none;border:none;color:var(--text2);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:background .15s,color .15s;text-align:left;position:relative; }
+    .nav-icon { width:18px;text-align:center;font-size:14px;color:var(--text3);transition:color .15s;flex-shrink:0; }
+    .nav-item:hover { background:var(--bg3);color:var(--text); }
+    .nav-item:hover .nav-icon { color:var(--text2); }
+    .nav-item.active { background:var(--gold-glow);color:var(--text);font-weight:600; }
+    .nav-item.active .nav-icon { color:var(--gold); }
+    .nav-item.active::before { content:'';position:absolute;left:0;top:3px;bottom:3px;width:3px;background:var(--gold);border-radius:0 3px 3px 0; }
+    .nav-badge { margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;transition:opacity .2s; }
+    .nav-badge.zero { opacity:0; }
+    .sidebar-footer { padding:14px 20px;border-top:1px solid var(--border);font-size:10.5px;color:var(--text3);line-height:1.6; }
+
+    /* MAIN */
+    .main { margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh; }
+    .topbar { height:60px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:50; }
+    .topbar-title { font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--text); }
+    .topbar-sub { font-size:11.5px;color:var(--text3);margin-top:2px; }
+    .topbar-right { display:flex;align-items:center;gap:10px; }
+    .content { flex:1;padding:28px; }
+
+    /* PAGES */
+    .page { display:none; }
+    .page.active { display:block; }
+
+    /* GRID */
+    .grid-4 { display:grid;grid-template-columns:repeat(4,1fr);gap:16px; }
+    .grid-3 { display:grid;grid-template-columns:repeat(3,1fr);gap:16px; }
+    .grid-2r { display:grid;grid-template-columns:1fr 1fr;gap:18px; }
+    .grid-2l { display:grid;grid-template-columns:1.4fr 1fr;gap:24px; }
+    .mb-10 { margin-bottom:10px; }
+    .mb-14 { margin-bottom:14px; }
+    .mb-20 { margin-bottom:20px; }
+    .mb-24 { margin-bottom:24px; }
+
+    /* CARDS */
+    .card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden; }
+    .card-head { display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border); }
+    .card-head-title { display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--text); }
+    .card-head-title i { color:var(--gold);font-size:14px; }
+    .card-body { padding:18px 20px; }
+    .card-body-flush > *:not(:last-child) { border-bottom:1px solid var(--border); }
+
+    /* STAT CARDS */
+    .stat-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:18px 20px;display:flex;align-items:center;gap:14px;transition:border-color .2s; }
+    .stat-card:hover { border-color:var(--border2); }
+    .stat-icon { width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0; }
+    .stat-card.gold .stat-icon { background:var(--gold-glow);color:var(--gold); }
+    .stat-card.green .stat-icon { background:rgba(90,158,111,.12);color:var(--green); }
+    .stat-card.amber .stat-icon { background:rgba(232,145,74,.12);color:var(--amber); }
+    .stat-card.red   .stat-icon { background:rgba(200,90,74,.12);color:var(--red); }
+    .stat-card.blue  .stat-icon { background:rgba(90,142,200,.12);color:var(--blue); }
+    .stat-label { font-size:11.5px;color:var(--text3);margin-bottom:4px; }
+    .stat-value { font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:var(--text);line-height:1; }
+    .stat-sub { font-size:11px;color:var(--text3);margin-top:3px; }
+
+    /* BUTTONS */
+    .btn { display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:var(--r);font-size:13px;font-family:'DM Sans',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap; }
+    .btn-sm { padding:6px 12px;font-size:12px; }
+    .btn-primary { background:var(--gold);color:#1a1400; }
+    .btn-primary:hover { background:#e8b84e; }
+    .btn-success { background:var(--green);color:#fff; }
+    .btn-success:hover { background:#6ab87f; }
+    .btn-secondary { background:var(--surface2);color:var(--text);border:1px solid var(--border2); }
+    .btn-secondary:hover { background:var(--surface);border-color:var(--border2); }
+    .btn-ghost { background:transparent;color:var(--text2);border:1px solid var(--border); }
+    .btn-ghost:hover { background:var(--surface);color:var(--text); }
+    .btn-danger { background:rgba(200,90,74,.15);color:var(--red);border:1px solid rgba(200,90,74,.25); }
+    .btn-danger:hover { background:rgba(200,90,74,.25); }
+    .btn:disabled { opacity:.45;cursor:not-allowed; }
+    .btn-icon { padding:7px;border-radius:6px; }
+
+    /* TABLES */
+    .tbl { width:100%;border-collapse:collapse; }
+    .tbl thead th { padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg3); }
+    .tbl tbody tr { transition:background .12s; }
+    .tbl tbody tr:hover { background:var(--bg3); }
+    .tbl tbody td { padding:12px 14px;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border); }
+    .tbl tbody tr:last-child td { border-bottom:none; }
+    .tbl .strong { color:var(--text);font-weight:600; }
+    .tbl .mono { font-family:'DM Mono',monospace;color:var(--gold); }
+    .tbl .dim { color:var(--text3); }
+    .td-actions { text-align:right;display:flex;gap:6px;justify-content:flex-end; }
+    .tbl-empty { text-align:center;color:var(--text3);padding:32px 14px !important;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px; }
+
+    /* BADGES */
+    .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600; }
+    .b-gold   { background:var(--gold-glow);color:var(--gold);border:1px solid rgba(212,168,67,.2); }
+    .b-green  { background:rgba(90,158,111,.12);color:var(--green);border:1px solid rgba(90,158,111,.2); }
+    .b-red    { background:rgba(200,90,74,.12);color:var(--red);border:1px solid rgba(200,90,74,.2); }
+    .b-amber  { background:rgba(232,145,74,.12);color:var(--amber);border:1px solid rgba(232,145,74,.2); }
+    .b-blue   { background:rgba(90,142,200,.12);color:var(--blue);border:1px solid rgba(90,142,200,.2); }
+    .b-purple { background:rgba(155,114,207,.12);color:var(--purple);border:1px solid rgba(155,114,207,.2); }
+    .b-gray   { background:var(--surface);color:var(--text2);border:1px solid var(--border); }
+
+    /* FORMS */
+    .form-section { background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden; }
+    .form-section-head { display:flex;align-items:center;gap:8px;padding:13px 20px;background:var(--bg3);border-bottom:1px solid var(--border); }
+    .form-section-title { font-size:13px;font-weight:600;color:var(--text); }
+    .form-section-tag { margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px; }
+    .form-section-body { padding:18px 20px; }
+    .form-row { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+    .form-row1 { display:grid;grid-template-columns:1fr;gap:14px; }
+    .form-row3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px; }
+    .form-group { display:flex;flex-direction:column;gap:5px; }
+    .form-group.full { grid-column:1/-1; }
+    .form-label { font-size:12px;font-weight:600;color:var(--text2);letter-spacing:.2px; }
+    .req { color:var(--gold);margin-left:2px; }
     .form-input, .form-select, .form-textarea {
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 9px 12px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13px; color: var(--text);
-      outline: none; width: 100%;
-      transition: border-color .18s, box-shadow .18s;
-      appearance: none; -webkit-appearance: none;
+      background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+      color:var(--text);font-size:13.5px;font-family:'DM Sans',sans-serif;
+      padding:9px 12px;transition:border-color .15s,box-shadow .15s;width:100%;
     }
+    .form-textarea { min-height:80px;resize:vertical; }
     .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212,168,67,.1);
+      outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-glow);
     }
-    .form-input::placeholder, .form-textarea::placeholder { color: var(--text3); }
-    .form-select option { background: var(--bg3); color: var(--text); }
-    .form-textarea { resize: vertical; min-height: 78px; }
+    .input-wrap { position:relative; }
+    .input-wrap .iico { position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none; }
+    .input-wrap .form-input { padding-left:34px; }
+    .select-wrap { position:relative; }
+    .select-wrap::after { content:'\f078';font-family:'Font Awesome 6 Free';font-weight:900;position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:11px;pointer-events:none; }
+    .select-wrap .form-select { appearance:none;padding-right:30px; }
+    .form-hint { font-size:11px;color:var(--text3);line-height:1.4; }
+    .form-error-msg { font-size:11px;color:var(--red);display:none; }
+    .form-group.error .form-error-msg { display:block; }
+    .form-group.error .form-input,
+    .form-group.error .form-select { border-color:var(--red); }
+    .form-actions { display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;background:var(--bg3);border-top:1px solid var(--border); }
+    .radio-deck { display:flex;gap:10px;flex-wrap:wrap; }
+    .radio-card { cursor:pointer; }
+    .radio-card input { display:none; }
+    .radio-card-inner { display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 18px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg3);transition:all .15s;min-width:90px; }
+    .radio-card input:checked + .radio-card-inner { border-color:var(--gold);background:var(--gold-glow); }
+    .rci-icon { font-size:18px;color:var(--text3); }
+    .radio-card input:checked + .radio-card-inner .rci-icon { color:var(--gold); }
+    .rci-label { font-size:12px;font-weight:600;color:var(--text2); }
+    .radio-card input:checked + .radio-card-inner .rci-label { color:var(--text); }
+    .cond-block { margin-top:14px;padding:16px;background:var(--bg3);border-radius:var(--r);border:1px solid var(--border);display:none; }
+    .cond-block.visible { display:block; }
+    .cond-block-label { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);margin-bottom:12px;display:flex;align-items:center;gap:6px; }
+    .rule-banner { display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(232,145,74,.07);border:1px solid rgba(232,145,74,.18);border-radius:var(--r);margin-bottom:20px;font-size:12.5px;color:var(--amber);line-height:1.5; }
 
-    /* Champ en erreur */
-    .form-group.has-error .form-input,
-    .form-group.has-error .form-select { border-color: var(--red); }
-    .form-error-msg {
-      font-size: 11px; color: var(--red);
-      display: none; margin-top: 2px;
-    }
-    .form-group.has-error .form-error-msg { display: block; }
+    /* FLEX HELPERS */
+    .flex-between { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+    .flex-row { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+    .text-dim { font-size:12.5px;color:var(--text3); }
+    .strong { color:var(--text);font-weight:600; }
 
-    /* Hint sous le champ */
-    .form-hint {
-      font-size: 11px; color: var(--text3);
-      font-style: italic; margin-top: 2px;
-    }
+    /* ALERT ROWS */
+    .alert-row { display:flex;align-items:flex-start;gap:14px;padding:14px 20px;transition:background .12s; }
+    .alert-row:hover { background:var(--bg3); }
+    .alert-row.unread { background:rgba(212,168,67,.04); }
+    .alert-ico-wrap { width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;margin-top:1px; }
+    .alert-ico-wrap.info     { background:rgba(90,142,200,.12);color:var(--blue); }
+    .alert-ico-wrap.warning  { background:rgba(232,145,74,.12);color:var(--amber); }
+    .alert-ico-wrap.critique { background:rgba(200,90,74,.12);color:var(--red); }
+    .alert-body { flex:1;min-width:0; }
+    .alert-msg { font-size:13px;color:var(--text);line-height:1.45; }
+    .alert-meta { font-size:11.5px;color:var(--text3);margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
 
-    /* Sélecteur type de présence — boutons radio stylisés */
-    .radio-deck {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
+    /* ZONE CARDS */
+    .zone-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px; }
+    .zone-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;transition:border-color .2s;cursor:default; }
+    .zone-card:hover { border-color:var(--border2); }
+    .zone-card-name { font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px; }
+    .zone-card-desc { font-size:12px;color:var(--text3);line-height:1.45;margin-bottom:10px; }
+    .zone-card-foot { display:flex;align-items:center;justify-content:space-between; }
 
-    .radio-card {
-      position: relative;
-      cursor: pointer;
-    }
-    .radio-card input[type="radio"] {
-      position: absolute; opacity: 0; width: 0; height: 0;
-    }
-    .radio-card-inner {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 6px; padding: 14px 10px;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      text-align: center;
-      transition: all .15s;
-    }
-    .radio-card-inner .rci-icon {
-      width: 30px; height: 30px;
-      border-radius: 8px;
-      background: var(--surface);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; color: var(--text3);
-      transition: all .15s;
-    }
-    .radio-card-inner .rci-label {
-      font-size: 11.5px; font-weight: 600;
-      color: var(--text2);
-      transition: color .15s;
-    }
+    /* SEARCH BAR */
+    .search-bar { display:flex;align-items:center;gap:0;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;transition:border-color .15s,box-shadow .15s; }
+    .search-bar:focus-within { border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-glow); }
+    .search-bar i { padding:0 12px;color:var(--text3);font-size:13px; }
+    .search-bar input { flex:1;background:none;border:none;outline:none;color:var(--text);font-size:13.5px;font-family:'DM Sans',sans-serif;padding:9px 12px 9px 0; }
+    .search-bar input::placeholder { color:var(--text3); }
 
-    .radio-card input:checked + .radio-card-inner {
-      border-color: var(--gold);
-      background: var(--gold-glow2);
-      box-shadow: 0 0 0 2px rgba(212,168,67,.1);
-    }
-    .radio-card input:checked + .radio-card-inner .rci-icon {
-      background: rgba(212,168,67,.15); color: var(--gold);
-    }
-    .radio-card input:checked + .radio-card-inner .rci-label { color: var(--gold); }
+    /* TENDANCE INLINE */
+    .tend-hausse { color:var(--green); }
+    .tend-baisse { color:var(--red); }
+    .tend-stable { color:var(--text3); }
 
-    /* Actions de formulaire */
-    .form-actions {
-      display: flex; align-items: center;
-      justify-content: flex-end; gap: 10px;
-      padding: 16px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--bg3);
-    }
+    /* PROGRESS BAR */
+    .prog-bar { height:4px;background:var(--surface);border-radius:2px;overflow:hidden;margin-top:6px; }
+    .prog-fill { height:100%;border-radius:2px;transition:width .4s; }
 
-    /* ================================================================
-       ALERTES — journal
-    ================================================================ */
-    .alert-row {
-      display: flex; align-items: flex-start;
-      gap: 12px;
-      padding: 13px 18px;
-      border-bottom: 1px solid var(--border);
-      transition: background .15s;
-    }
-    .alert-row:last-child { border-bottom: none; }
-    .alert-row:hover { background: var(--surface); }
-    .alert-row.unread { border-left: 2px solid var(--gold); }
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width:5px;height:5px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--border2);border-radius:4px; }
 
-    .alert-ico-wrap {
-      width: 34px; height: 34px; flex-shrink: 0;
-      border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px;
-    }
-    .alert-ico-wrap.info     { background: rgba(90,142,200,.12); color: var(--blue);  }
-    .alert-ico-wrap.warning  { background: rgba(232,145,74,.12); color: var(--amber); }
-    .alert-ico-wrap.critique { background: rgba(200,90,74,.12);  color: var(--red);   }
+    /* CAT INLINE ICON */
+    .icone-preview { width:34px;height:34px;border-radius:8px;background:var(--gold-glow);display:flex;align-items:center;justify-content:center;font-size:18px; }
 
-    .alert-body { flex: 1; min-width: 0; }
-    .alert-msg  { font-size: 13px; color: var(--text); line-height: 1.45; margin-bottom: 4px; }
-    .alert-meta {
-      display: flex; align-items: center; flex-wrap: wrap;
-      gap: 8px; font-size: 11.5px; color: var(--text3);
-    }
-    .alert-meta i { font-size: 9px; }
-
-    /* ================================================================
-       MINI LISTE SESSIONS (sidebar droite saisie)
-    ================================================================ */
-    .session-mini {
-      padding: 11px 16px;
-      border-bottom: 1px solid var(--border);
-      transition: background .15s;
-    }
-    .session-mini:last-child { border-bottom: none; }
-    .session-mini:hover { background: var(--surface); }
-    .session-mini-top {
-      display: flex; align-items: center;
-      justify-content: space-between; gap: 8px;
-      margin-bottom: 3px;
-    }
-    .session-mini-id {
-      font-family: 'DM Mono', monospace;
-      font-size: 12px; color: var(--text);
-      font-weight: 500;
-    }
-    .session-mini-meta { font-size: 11.5px; color: var(--text3); }
-    .session-mini-recette {
-      font-family: 'DM Mono', monospace;
-      font-size: 12.5px; color: var(--gold);
-      font-weight: 500;
-    }
-
-    /* ================================================================
-       SÉPARATEUR MÉTIER (entre les deux formulaires enregistrement)
-    ================================================================ */
-    .rule-banner {
-      display: flex; align-items: center;
-      gap: 14px;
-      padding: 11px 18px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--r);
-      margin: 6px 0 20px;
-      font-size: 12px; color: var(--text3);
-    }
-    .rule-banner i { color: var(--amber); font-size: 13px; flex-shrink: 0; }
-
-    /* ================================================================
-       LOADER PAGE INITIALE
-    ================================================================ */
-    #page-loader {
-      position: fixed; inset: 0;
-      background: var(--bg);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 16px; z-index: 9000;
-      transition: opacity .35s;
-    }
-    #page-loader.hidden { opacity: 0; pointer-events: none; }
-    .loader-ring {
-      width: 40px; height: 40px;
-      border: 2.5px solid var(--border2);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin .75s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loader-label { font-size: 12px; color: var(--text3); letter-spacing: .4px; }
-
-    /* ================================================================
-       SPINNER BOUTON
-    ================================================================ */
-    .btn-spinner {
-      display: inline-block;
-      width: 13px; height: 13px;
-      border: 2px solid rgba(0,0,0,.2);
-      border-top-color: currentColor;
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
-      flex-shrink: 0;
-    }
-
-    /* ================================================================
-       UTILITAIRES
-    ================================================================ */
-    .mb-20 { margin-bottom: 20px; }
-    .mb-14 { margin-bottom: 14px; }
-    .mt-14 { margin-top: 14px; }
-    .flex-row { display: flex; align-items: center; gap: 10px; }
-    .flex-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .text-gold  { color: var(--gold);  }
-    .text-green { color: var(--green); }
-    .text-red   { color: var(--red);   }
-    .text-dim   { color: var(--text3); font-size: 12px; }
-    .mono { font-family: 'DM Mono', monospace; }
-    .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+    @media(max-width:1100px) { .grid-4{grid-template-columns:1fr 1fr;} .grid-2r,.grid-2l{grid-template-columns:1fr;} }
+    @media(max-width:720px) { .grid-4{grid-template-columns:1fr;} .sidebar{transform:translateX(-100%);} .main{margin-left:0;} }
   </style>
 </head>
-
 <body>
-
-<!-- ══════════════════════════════════════════════════════
-     LOADER
-══════════════════════════════════════════════════════ -->
-<div id="page-loader">
-  <div class="loader-ring"></div>
-  <span class="loader-label">Connexion au backend…</span>
-</div>
-
-<!-- ══════════════════════════════════════════════════════
-     SNACKBARS
-══════════════════════════════════════════════════════ -->
 <div id="snack-container"></div>
 
-<!-- ══════════════════════════════════════════════════════
-     APP LAYOUT
-══════════════════════════════════════════════════════ -->
-<div class="app">
-
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar">
-    <div class="sidebar-head">
-      <div class="brand-logo"><i class="fa-solid fa-store"></i></div>
-      <div class="brand-title">Marché Dang</div>
-      <div class="brand-sub">Ngaoundéré 3ème — VST</div>
-
-      <!-- Statut API -->
-      <div class="api-row">
-        <div class="status-dot" id="api-dot"></div>
-        <span class="api-label" id="api-label">Connexion…</span>
-      </div>
+<!-- MODAL Catégorie -->
+<div class="modal-overlay" id="modal-cat">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title">Nouvelle catégorie</span>
+      <button class="modal-close" onclick="closeModal('modal-cat')"><i class="fa-solid fa-xmark"></i></button>
     </div>
+    <div class="modal-body">
+      <form id="form-modal-cat" novalidate>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group" id="fg-mc-nom">
+            <label class="form-label">Nom de la catégorie <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="iico fa-solid fa-layer-group"></i>
+              <input class="form-input" type="text" id="mc-nom" required placeholder="ex : Alimentation, Textile, Restauration…" />
+            </div>
+            <span class="form-error-msg">Nom obligatoire</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description <span style="color:var(--text3);font-weight:400">(optionnel)</span></label>
+            <textarea class="form-textarea" id="mc-desc" placeholder="Brève description de cette famille de commerce…" style="min-height:70px"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Icône emoji <span style="color:var(--text3);font-weight:400">(optionnel)</span></label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="input-wrap" style="flex:1">
+                <i class="iico fa-solid fa-face-smile"></i>
+                <input class="form-input" type="text" id="mc-icone" maxlength="5" placeholder="🌾  🍽️  📱  🧵  🔨 …" style="font-size:20px;" oninput="updateIconePreview()" />
+              </div>
+              <div class="icone-preview" id="icone-preview">?</div>
+            </div>
+            <span class="form-hint">Un seul emoji — visible sur l'app mobile</span>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('modal-cat')">Annuler</button>
+            <button type="submit" class="btn btn-primary" id="btn-modal-cat"><i class="fa-solid fa-layer-group"></i> Créer la catégorie</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
+<!-- MODAL Zone -->
+<div class="modal-overlay" id="modal-zone">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title">Nouvelle zone de marché</span>
+      <button class="modal-close" onclick="closeModal('modal-zone')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <form id="form-modal-zone" novalidate>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group" id="fg-mz-nom">
+            <label class="form-label">Nom de la zone <span class="req">*</span></label>
+            <div class="input-wrap">
+              <i class="iico fa-solid fa-location-dot"></i>
+              <input class="form-input" type="text" id="mz-nom" required placeholder="ex : Secteur A — Céréales, Bord de route…" />
+            </div>
+            <span class="form-error-msg">Nom obligatoire</span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description <span style="color:var(--text3);font-weight:400">(optionnel)</span></label>
+            <textarea class="form-textarea" id="mz-desc" placeholder="Localisation, caractéristiques particulières de cette zone…" style="min-height:70px"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Latitude <span style="color:var(--text3);font-weight:400">(optionnel)</span></label>
+              <input class="form-input" type="number" id="mz-lat" step="0.000001" placeholder="ex : 7.335460" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude <span style="color:var(--text3);font-weight:400">(optionnel)</span></label>
+              <input class="form-input" type="number" id="mz-lng" step="0.000001" placeholder="ex : 13.578320" />
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('modal-zone')">Annuler</button>
+            <button type="submit" class="btn btn-primary" id="btn-modal-zone"><i class="fa-solid fa-location-dot"></i> Créer la zone</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL PANEL Activité -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-head">
+    <div class="detail-head-left">
+      <h2 id="dp-nom">—</h2>
+      <div class="detail-sub" id="dp-cat">—</div>
+    </div>
+    <button class="detail-close" onclick="closeDetail()"><i class="fa-solid fa-xmark"></i></button>
+  </div>
+  <div class="detail-body" id="dp-body">
+    <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i> Chargement…</div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-main">Veille Marché Dang</div>
+      <div class="logo-sub">Ngaoundéré 3ème · Adamaoua</div>
+    </div>
+    <div class="api-row">
+      <div class="status-dot" id="api-dot"></div>
+      <span class="api-label" id="api-label">Connexion…</span>
+    </div>
     <nav class="nav">
       <div class="nav-section-label">Principal</div>
-
       <button class="nav-item active" id="nav-dashboard" onclick="goTo('dashboard')">
-        <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
-        Tableau de bord
+        <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>Tableau de bord
       </button>
-
       <button class="nav-item" id="nav-saisie" onclick="goTo('saisie')">
-        <span class="nav-icon"><i class="fa-solid fa-pen-to-square"></i></span>
-        Saisie session
+        <span class="nav-icon"><i class="fa-solid fa-pen-to-square"></i></span>Saisie session
       </button>
-
       <div class="nav-section-label" style="margin-top:6px">Référentiels</div>
-
+      <button class="nav-item" id="nav-referentiels" onclick="goTo('referentiels')">
+        <span class="nav-icon"><i class="fa-solid fa-database"></i></span>Catégories & Zones
+      </button>
       <button class="nav-item" id="nav-enregistrement" onclick="goTo('enregistrement')">
-        <span class="nav-icon"><i class="fa-solid fa-circle-plus"></i></span>
-        Enregistrement
+        <span class="nav-icon"><i class="fa-solid fa-circle-plus"></i></span>Enregistrement
       </button>
-
       <button class="nav-item" id="nav-commercants" onclick="goTo('commercants')">
-        <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
-        Commerçants
-      </button>
-     
-      <button class="nav-item" id="nav-categories" onclick="goTo('categories')">
-        <span class="nav-icon"><i class="fa-solid fa-folder-plus"></i></span>
-        Catégories
+        <span class="nav-icon"><i class="fa-solid fa-users"></i></span>Commerçants
       </button>
       <button class="nav-item" id="nav-activites" onclick="goTo('activites')">
-        <span class="nav-icon"><i class="fa-solid fa-tag"></i></span>
-        Activités
+        <span class="nav-icon"><i class="fa-solid fa-tag"></i></span>Activités
       </button>
-
       <div class="nav-section-label" style="margin-top:6px">Veille</div>
-
       <button class="nav-item" id="nav-alertes" onclick="goTo('alertes')">
-        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>
-        Alertes
+        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>Alertes
         <span class="nav-badge zero" id="nav-badge-alertes">0</span>
       </button>
     </nav>
-
-    <div class="sidebar-footer">
-      Module VST 2025/2026<br/>
-      Encadrant : Prof. Dr.-Ing. Paul DAYANG
-    </div>
+    <div class="sidebar-footer">Module VST 2025/2026<br/>Encadrant : Prof. Dr.-Ing. Paul DAYANG</div>
   </aside>
 
-  <!-- ── MAIN ── -->
   <div class="main">
-
-    <!-- TOPBAR -->
     <div class="topbar">
-      <div class="topbar-left">
-        <div>
-          <div class="topbar-title" id="topbar-title">Tableau de bord</div>
-          <div class="topbar-sub" id="topbar-sub">Vue d'ensemble du marché</div>
-        </div>
+      <div>
+        <div class="topbar-title" id="topbar-title">Tableau de bord</div>
+        <div class="topbar-sub" id="topbar-sub">Vue d'ensemble du marché</div>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-ghost btn-sm" onclick="refreshCurrent()">
-          <i class="fa-solid fa-rotate-right"></i> Actualiser
-        </button>
+        <button class="btn btn-ghost btn-sm" onclick="refreshCurrent()"><i class="fa-solid fa-rotate-right"></i> Actualiser</button>
       </div>
     </div>
 
-    <!-- CONTENU PAGES -->
     <div class="content">
 
-      <!-- ══════════════════════════════════════════════════
-           PAGE : DASHBOARD
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ DASHBOARD ══ -->
       <div class="page active" id="page-dashboard">
-
-        <!-- KPIs -->
         <div class="grid-4 mb-20">
-          <div class="stat-card gold">
-            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-            <div class="stat-label">Commerçants actifs</div>
-            <div class="stat-value" id="kpi-com">—</div>
-          </div>
-          <div class="stat-card green">
-            <div class="stat-icon"><i class="fa-solid fa-tag"></i></div>
-            <div class="stat-label">Activités suivies</div>
-            <div class="stat-value" id="kpi-act">—</div>
-          </div>
-          <div class="stat-card amber">
-            <div class="stat-icon"><i class="fa-solid fa-location-dot"></i></div>
-            <div class="stat-label">Zones marché</div>
-            <div class="stat-value" id="kpi-zones">—</div>
-          </div>
-          <div class="stat-card red">
-            <div class="stat-icon"><i class="fa-solid fa-bell"></i></div>
-            <div class="stat-label">Alertes non lues</div>
-            <div class="stat-value" id="kpi-alertes">—</div>
-          </div>
+          <div class="stat-card gold"><div class="stat-icon"><i class="fa-solid fa-users"></i></div><div><div class="stat-label">Commerçants actifs</div><div class="stat-value" id="kpi-com">—</div></div></div>
+          <div class="stat-card green"><div class="stat-icon"><i class="fa-solid fa-tag"></i></div><div><div class="stat-label">Activités suivies</div><div class="stat-value" id="kpi-act">—</div></div></div>
+          <div class="stat-card amber"><div class="stat-icon"><i class="fa-solid fa-location-dot"></i></div><div><div class="stat-label">Zones marché</div><div class="stat-value" id="kpi-zones">—</div></div></div>
+          <div class="stat-card red"><div class="stat-icon"><i class="fa-solid fa-bell"></i></div><div><div class="stat-label">Alertes non lues</div><div class="stat-value" id="kpi-alertes">—</div></div></div>
         </div>
 
-        <!-- CA Semaine -->
         <div class="card mb-20">
           <div class="card-head">
-            <div class="card-head-title">
-              <i class="fa-solid fa-coins"></i>
-              Chiffre d'affaires — semaine en cours
-            </div>
+            <div class="card-head-title"><i class="fa-solid fa-coins"></i> CA global — semaine en cours</div>
             <span id="dash-tendance" class="badge b-gray">—</span>
           </div>
           <div class="card-body">
-            <div style="display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap">
+            <div style="display:flex;align-items:flex-end;gap:32px;flex-wrap:wrap">
               <div>
                 <div class="text-dim" style="margin-bottom:4px">Cette semaine</div>
-                <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:900;color:var(--gold)" id="dash-ca-cur">—</div>
+                <div style="font-family:'Playfair Display',serif;font-size:38px;font-weight:900;color:var(--gold)" id="dash-ca-cur">—</div>
                 <div class="text-dim">FCFA</div>
               </div>
               <div>
                 <div class="text-dim" style="margin-bottom:4px">Semaine précédente</div>
-                <div style="font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text2)" id="dash-ca-prev">—</div>
+                <div style="font-family:'DM Mono',monospace;font-size:22px;color:var(--text2)" id="dash-ca-prev">—</div>
                 <div class="text-dim">FCFA</div>
               </div>
             </div>
+
+            <!-- CA par catégorie -->
+            <div style="margin-top:20px;">
+              <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:10px">Répartition par catégorie</div>
+              <div id="dash-ca-cats" style="display:flex;flex-direction:column;gap:7px;">
+                <div class="text-dim" style="font-size:12px">Chargement…</div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Top activités + Alertes récentes -->
         <div class="grid-2r">
-
           <div class="card">
             <div class="card-head">
-              <div class="card-head-title">
-                <i class="fa-solid fa-ranking-star"></i> Top activités du mois
-              </div>
-              <span class="text-dim">par CA</span>
+              <div class="card-head-title"><i class="fa-solid fa-ranking-star"></i> Top activités du mois</div>
+              <span class="text-dim">par CA · cliquer pour détail</span>
             </div>
             <div class="card-body-flush">
               <table class="tbl">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Activité</th>
-                    <th>CA (FCFA)</th>
-                    <th>Tendance</th>
-                  </tr>
-                </thead>
-                <tbody id="top-tbody">
-                  <tr><td colspan="4" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
-                </tbody>
+                <thead><tr><th>#</th><th>Activité</th><th>CA (FCFA)</th><th>Commerçants</th><th>Tendance</th></tr></thead>
+                <tbody id="top-tbody"><tr><td colspan="5" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr></tbody>
               </table>
             </div>
           </div>
-
           <div class="card">
             <div class="card-head">
-              <div class="card-head-title">
-                <i class="fa-solid fa-bell"></i> Alertes récentes
-              </div>
-              <button class="btn btn-ghost btn-sm" onclick="goTo('alertes')">
-                Voir tout <i class="fa-solid fa-arrow-right"></i>
-              </button>
+              <div class="card-head-title"><i class="fa-solid fa-bell"></i> Alertes récentes</div>
+              <button class="btn btn-ghost btn-sm" onclick="goTo('alertes')">Voir tout <i class="fa-solid fa-arrow-right"></i></button>
             </div>
-            <div id="dash-alertes-list">
-              <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
-            </div>
+            <div id="dash-alertes-list"><div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div></div>
           </div>
+        </div>
+      </div><!-- /dashboard -->
 
-        </div>
-      </div><!-- /page-dashboard -->
-      <!-- ══════════════════════════════════════════════════
-           PAGE : CATEGORIES
-      ══════════════════════════════════════════════════ -->
-      <div class="page" id="page-categories">
-        <div class="card">
-          <div class="card-head">
-            <div class="card-head-title">
-              <i class="fa-solid fa-folder-plus"></i> Nouvelle catégorie
-            </div>
-          </div>
-      
-          <form id="form-category" novalidate>
-            <div class="form-section-body" style="padding:20px">
-              <!-- Input for Category Name -->
-              <div class="form-row">
-                <div class="form-group" id="fg-cat-nom">
-                  <label class="form-label">Nom de la catégorie <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-folder"></i>
-                    <input class="form-input" type="text" id="cat-nom" required placeholder="ex : Alimentation, Vêtements…" />
-                  </div>
-                  <span class="form-error-msg">Nom obligatoire</span>
-                </div>
-              </div>
-      
-              <!-- Input for Category Description -->
-              <div class="form-row">
-                <div class="form-group" id="fg-cat-desc">
-                  <label class="form-label">Description <span class="req">*</span></label>
-                  <textarea class="form-textarea" id="cat-desc" required placeholder="Description de la catégorie…"></textarea>
-                  <span class="form-error-msg">Description obligatoire</span>
-                </div>
-              </div>
-      
-              <!-- Input for Category Icon -->
-              <div class="form-row">
-                <div class="form-group" id="fg-cat-icon">
-                  <label class="form-label">Icône (Font Awesome) <span class=""></span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-icons"></i>
-                    <input class="form-input" type="text" id="cat-icon" required placeholder="ex : fa-utensils, fa-tshirt…" />
-                  </div>
-                  <span class="form-hint">Utilisez une classe Font Awesome (ex : fa-utensils)</span>
-                  <span class="form-error-msg">Icône obligatoire</span>
-                </div>
-              </div>
-            </div>
-      
-            <!-- Form Actions -->
-            <div class="form-actions">
-              <button type="button" class="btn btn-ghost btn-sm" onclick="resetCategory()">
-                <i class="fa-solid fa-xmark"></i> Réinitialiser
-              </button>
-              <button type="submit" class="btn btn-primary" id="btn-category">
-                <i class="fa-solid fa-folder-plus"></i> Enregistrer la catégorie
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-      <!--  page des categories -->
-      <!-- ══════════════════════════════════════════════════
-           PAGE : SAISIE SESSION JOURNALIÈRE
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ SAISIE ══ -->
       <div class="page" id="page-saisie">
         <div class="grid-2l" style="align-items:start">
-
-          <!-- Formulaire saisie -->
           <div>
             <form id="form-session" novalidate>
-
-              <!-- Bloc : Commerçant -->
               <div class="form-section mb-14">
-                <div class="form-section-head">
-                  <i class="fa-solid fa-user-tie"></i>
-                  <span class="form-section-title">Commerçant</span>
-                </div>
+                <div class="form-section-head"><i class="fa-solid fa-user-tie"></i><span class="form-section-title">Commerçant</span></div>
                 <div class="form-section-body">
                   <div class="form-row1">
                     <div class="form-group" id="fg-s-com">
                       <label class="form-label">Sélectionner le commerçant <span class="req">*</span></label>
-                      <div class="select-wrap">
-                        <select class="form-select" id="s-com" required onchange="onComSelect()">
-                          <option value="">— Téléphone / Nom commercial —</option>
-                        </select>
-                      </div>
+                      <div class="select-wrap"><select class="form-select" id="s-com" required onchange="onComSelect()"><option value="">— Téléphone / Nom commercial —</option></select></div>
                       <span class="form-error-msg">Veuillez sélectionner un commerçant</span>
                     </div>
                   </div>
-                  <!-- Infos en lecture seule après sélection -->
                   <div id="com-info-strip" style="display:none">
                     <div class="form-row">
-                      <div class="form-group">
-                        <label class="form-label">Type de présence</label>
-                        <input class="form-input" id="ci-type" readonly style="color:var(--text2);cursor:default" />
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label">Activité principale</label>
-                        <input class="form-input" id="ci-act" readonly style="color:var(--text2);cursor:default" />
-                      </div>
+                      <div class="form-group"><label class="form-label">Type de présence</label><input class="form-input" id="ci-type" readonly style="color:var(--text2);cursor:default" /></div>
+                      <div class="form-group"><label class="form-label">Activité principale</label><input class="form-input" id="ci-act" readonly style="color:var(--text2);cursor:default" /></div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- Bloc : Session -->
               <div class="form-section mb-14">
-                <div class="form-section-head">
-                  <i class="fa-solid fa-calendar-day"></i>
-                  <span class="form-section-title">Session du jour</span>
-                </div>
+                <div class="form-section-head"><i class="fa-solid fa-calendar-day"></i><span class="form-section-title">Session du jour</span></div>
                 <div class="form-section-body">
                   <div class="form-row">
                     <div class="form-group" id="fg-s-date">
                       <label class="form-label">Date <span class="req">*</span></label>
-                      <div class="input-wrap">
-                        <i class="iico fa-regular fa-calendar"></i>
-                        <input class="form-input" type="date" id="s-date" required />
-                      </div>
+                      <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="s-date" required /></div>
                       <span class="form-error-msg">Date obligatoire</span>
                     </div>
                     <div class="form-group" id="fg-s-statut">
                       <label class="form-label">Statut <span class="req">*</span></label>
-                      <div class="select-wrap">
-                        <select class="form-select" id="s-statut" required onchange="onStatutChange()">
-                          <option value="ouvert">Ouvert</option>
-                          <option value="ferme">Fermé</option>
-                          <option value="absent_maladie">Absent — maladie</option>
-                          <option value="absent_approvisionnement">Absent — approvisionnement</option>
-                          <option value="inconnu">Inconnu</option>
-                        </select>
-                      </div>
+                      <div class="select-wrap"><select class="form-select" id="s-statut" required onchange="onStatutChange()"><option value="ouvert">Ouvert</option><option value="ferme">Fermé</option><option value="absent_maladie">Absent — maladie</option><option value="absent_approvisionnement">Absent — approvisionnement</option><option value="inconnu">Inconnu</option></select></div>
                     </div>
                   </div>
                   <div class="form-row">
                     <div class="form-group" id="fg-s-act">
-                      <label class="form-label">Activité exercée ce jour <span class="req">*</span></label>
-                      <div class="select-wrap">
-                        <select class="form-select" id="s-act" required>
-                          <option value="">— Sélectionner —</option>
-                        </select>
-                      </div>
-                      <span class="form-hint">Peut différer de l'activité principale</span>
-                      <span class="form-error-msg">Activité obligatoire</span>
+                      <label class="form-label">Activité exercée ce jour</label>
+                      <div class="select-wrap"><select class="form-select" id="s-act"><option value="">— Activité principale (défaut) —</option></select></div>
+                      <span class="form-hint">Laisser vide = activité principale du commerçant</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label">Zone d'observation</label>
-                      <div class="select-wrap">
-                        <select class="form-select" id="s-zone">
-                          <option value="">— Facultatif —</option>
-                        </select>
-                      </div>
+                      <div class="select-wrap"><select class="form-select" id="s-zone"><option value="">— Facultatif —</option></select></div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- Bloc : Recette (affiché si statut = ouvert) -->
               <div class="form-section mb-14" id="bloc-recette">
-                <div class="form-section-head">
-                  <i class="fa-solid fa-money-bill-wave"></i>
-                  <span class="form-section-title">Recette journalière</span>
-                </div>
+                <div class="form-section-head"><i class="fa-solid fa-money-bill-wave"></i><span class="form-section-title">Recette journalière</span></div>
                 <div class="form-section-body">
                   <div class="form-row">
                     <div class="form-group" id="fg-s-recette">
                       <label class="form-label">Montant global déclaré (FCFA) <span class="req">*</span></label>
-                      <div class="input-wrap">
-                        <i class="iico fa-solid fa-coins"></i>
-                        <input class="form-input" type="number" id="s-recette"
-                               min="0" step="100" placeholder="ex : 15 000" />
-                      </div>
-                      <span class="form-hint">Total journalier — pas de détail par produit</span>
-                      <span class="form-error-msg">Montant obligatoire si le commerçant est ouvert</span>
+                      <div class="input-wrap"><i class="iico fa-solid fa-coins"></i><input class="form-input" type="number" id="s-recette" min="0" step="100" placeholder="ex : 15 000" /></div>
+                      <span class="form-hint">Total journalier — bilan de la journée entière</span>
+                      <span class="form-error-msg">Montant obligatoire si ouvert</span>
                     </div>
                     <div class="form-group">
                       <label class="form-label">Fiabilité de la donnée</label>
-                      <div class="select-wrap">
-                        <select class="form-select" id="s-fiab">
-                          <option value="0.90">0.90 — Agent + fiche papier (défaut)</option>
-                          <option value="0.65">0.65 — Déclaration directe</option>
-                          <option value="0.40">0.40 — Estimation terrain</option>
-                        </select>
-                      </div>
+                      <div class="select-wrap"><select class="form-select" id="s-fiab"><option value="0.90">0.90 — Agent + fiche papier</option><option value="0.65">0.65 — Déclaration directe</option><option value="0.40">0.40 — Estimation terrain</option></select></div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- Bloc : Notes -->
               <div class="form-section mb-14">
-                <div class="form-section-head">
-                  <i class="fa-solid fa-note-sticky"></i>
-                  <span class="form-section-title">Notes de terrain</span>
-                  <span class="form-section-tag optional">Facultatif</span>
-                </div>
-                <div class="form-section-body">
-                  <div class="form-row1">
-                    <div class="form-group full">
-                      <textarea class="form-textarea" id="s-notes"
-                                placeholder="Observations qualitatives, contexte, remarques de l'agent…"></textarea>
-                    </div>
-                  </div>
-                </div>
+                <div class="form-section-head"><i class="fa-solid fa-note-sticky"></i><span class="form-section-title">Notes de terrain</span><span class="form-section-tag optional b-gray" style="margin-left:auto;font-size:10px;padding:2px 8px;border-radius:20px">Facultatif</span></div>
+                <div class="form-section-body"><div class="form-row1"><div class="form-group full"><textarea class="form-textarea" id="s-notes" placeholder="Observations qualitatives, contexte…"></textarea></div></div></div>
               </div>
-
               <div class="form-actions" style="border-radius:var(--r-lg);border:1px solid var(--border)">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="resetSession()">
-                  <i class="fa-solid fa-xmark"></i> Réinitialiser
-                </button>
-                <button type="submit" class="btn btn-primary" id="btn-session">
-                  <i class="fa-solid fa-floppy-disk"></i> Enregistrer la session
-                </button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="resetSession()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+                <button type="submit" class="btn btn-primary" id="btn-session"><i class="fa-solid fa-floppy-disk"></i> Enregistrer la session</button>
               </div>
-
             </form>
           </div>
-
-          <!-- Mini-liste des dernières sessions -->
           <div class="card" style="position:sticky;top:78px">
-            <div class="card-head">
-              <div class="card-head-title">
-                <i class="fa-solid fa-clock-rotate-left"></i> Sessions récentes
-              </div>
-              <span class="text-dim">50 dernières</span>
-            </div>
-            <div id="sessions-list" style="max-height:560px;overflow-y:auto">
-              <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
-            </div>
+            <div class="card-head"><div class="card-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Sessions récentes</div><span class="text-dim">50 dernières</span></div>
+            <div id="sessions-list" style="max-height:560px;overflow-y:auto"><div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div></div>
           </div>
-
         </div>
-      </div><!-- /page-saisie -->
+      </div><!-- /saisie -->
 
-      <!-- ══════════════════════════════════════════════════
-           PAGE : ENREGISTREMENT
-           Règle métier :
-             - Activité = autonome (pas besoin de commerçant)
-             - Commerçant = activité OBLIGATOIRE
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ RÉFÉRENTIELS (Catégories + Zones) ══ -->
+      <div class="page" id="page-referentiels">
+
+        <!-- Catégories -->
+        <div class="card mb-24">
+          <div class="card-head">
+            <div class="card-head-title"><i class="fa-solid fa-layer-group"></i> Catégories d'activités</div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-cat')"><i class="fa-solid fa-plus"></i> Nouvelle catégorie</button>
+          </div>
+          <div id="cats-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+            <div class="tbl-empty" style="grid-column:1/-1"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
+          </div>
+        </div>
+
+        <!-- Zones -->
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-title"><i class="fa-solid fa-location-dot"></i> Zones du marché</div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('modal-zone')"><i class="fa-solid fa-plus"></i> Nouvelle zone</button>
+          </div>
+          <div id="zones-grid" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;">
+            <div class="tbl-empty" style="grid-column:1/-1"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
+          </div>
+        </div>
+      </div><!-- /referentiels -->
+
+      <!-- ══ ENREGISTREMENT ══ -->
       <div class="page" id="page-enregistrement">
-
-        <!-- ─── FORMULAIRE ACTIVITÉ ─── -->
         <div class="card mb-20">
           <div class="card-head">
-            <div class="card-head-title">
-              <i class="fa-solid fa-tag"></i> Nouvelle activité
-            </div>
-            <span class="badge b-gold">
-              <i class="fa-solid fa-bolt"></i> Alerte + push mobile auto
-            </span>
+            <div class="card-head-title"><i class="fa-solid fa-tag"></i> Nouvelle activité</div>
+            <span class="badge b-gold"><i class="fa-solid fa-bolt"></i> Alerte + push mobile auto</span>
           </div>
-
           <form id="form-act" novalidate>
-
             <div class="form-section-body" style="padding:20px">
               <div class="form-row">
                 <div class="form-group" id="fg-a-cat">
                   <label class="form-label">Catégorie <span class="req">*</span></label>
-                  <div class="select-wrap">
-                    <select class="form-select" id="a-cat" required>
-                      <option value="">— Sélectionner —</option>
-                    </select>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <div class="select-wrap" style="flex:1"><select class="form-select" id="a-cat" required><option value="">— Sélectionner —</option></select></div>
+                    <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Créer une catégorie" onclick="openModal('modal-cat')"><i class="fa-solid fa-plus"></i></button>
                   </div>
                   <span class="form-error-msg">Catégorie obligatoire</span>
                 </div>
                 <div class="form-group" id="fg-a-nom">
                   <label class="form-label">Nom de l'activité <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-tag"></i>
-                    <input class="form-input" type="text" id="a-nom" required
-                           placeholder="ex : Vente de maïs en gros" />
-                  </div>
+                  <div class="input-wrap"><i class="iico fa-solid fa-tag"></i><input class="form-input" type="text" id="a-nom" required placeholder="ex : Vente de maïs en gros" /></div>
                   <span class="form-error-msg">Nom obligatoire</span>
                 </div>
               </div>
-              <div class="form-row">
+              <div class="form-row1" style="margin-top:14px">
                 <div class="form-group full">
                   <label class="form-label">Mots-clés (recherche mobile)</label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-magnifying-glass"></i>
-                    <input class="form-input" type="text" id="a-mots"
-                           placeholder="mais cereale grain farine sac gros…" />
-                  </div>
-                  <span class="form-hint">Séparés par des espaces — utilisés pour la veille sur l'app mobile</span>
+                  <div class="input-wrap"><i class="iico fa-solid fa-magnifying-glass"></i><input class="form-input" type="text" id="a-mots" placeholder="mais cereale grain farine sac gros…" /></div>
+                  <span class="form-hint">Séparés par des espaces — utilisés pour la veille mobile</span>
                 </div>
               </div>
-              <div class="form-row1">
+              <div class="form-row1" style="margin-top:14px">
                 <div class="form-group" id="fg-a-date">
                   <label class="form-label">Date de première observation <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-regular fa-calendar"></i>
-                    <input class="form-input" type="date" id="a-date" required />
-                  </div>
+                  <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="a-date" required /></div>
                   <span class="form-hint">Peut précéder la date d'aujourd'hui</span>
                   <span class="form-error-msg">Date obligatoire</span>
                 </div>
               </div>
             </div>
-
             <div class="form-actions">
-              <button type="button" class="btn btn-ghost btn-sm" onclick="resetAct()">
-                <i class="fa-solid fa-xmark"></i> Réinitialiser
-              </button>
-              <button type="submit" class="btn btn-primary" id="btn-act">
-                <i class="fa-solid fa-tag"></i> Enregistrer l'activité
-              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetAct()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+              <button type="submit" class="btn btn-primary" id="btn-act"><i class="fa-solid fa-tag"></i> Enregistrer l'activité</button>
             </div>
-
           </form>
         </div>
 
-        <!-- Séparateur règle métier -->
-        <div class="rule-banner">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>
-            Pour enregistrer un commerçant, une activité doit d'abord exister en base.
-            Si l'activité vient d'être créée, elle est immédiatement disponible ci-dessous.
-          </span>
-        </div>
+        <div class="rule-banner"><i class="fa-solid fa-triangle-exclamation"></i><span>Pour enregistrer un commerçant, une activité doit d'abord exister. Elle est immédiatement disponible ci-dessous après création.</span></div>
 
-        <!-- ─── FORMULAIRE COMMERÇANT ─── -->
         <div class="card">
           <div class="card-head">
-            <div class="card-head-title">
-              <i class="fa-solid fa-user-plus"></i> Nouveau commerçant
-            </div>
-            <span class="badge b-red">
-              <i class="fa-solid fa-link"></i> Activité requise
-            </span>
+            <div class="card-head-title"><i class="fa-solid fa-user-plus"></i> Nouveau commerçant</div>
+            <span class="badge b-red"><i class="fa-solid fa-link"></i> Activité requise</span>
           </div>
-
           <form id="form-com" novalidate>
-
-            <!-- Activité liée — OBLIGATOIRE -->
             <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin-bottom:13px;display:flex;align-items:center;gap:7px">
-                <i class="fa-solid fa-link"></i> Activité principale — obligatoire
-              </div>
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-link"></i> Activité principale — obligatoire</div>
               <div class="form-row">
                 <div class="form-group" id="fg-c-act">
                   <label class="form-label">Activité <span class="req">*</span></label>
-                  <div class="select-wrap">
-                    <select class="form-select" id="c-act" required>
-                      <option value="">— Sélectionner une activité —</option>
-                    </select>
-                  </div>
-                  <span class="form-hint">Doit exister avant l'enregistrement du commerçant</span>
-                  <span class="form-error-msg">Activité obligatoire pour enregistrer un commerçant</span>
+                  <div class="select-wrap"><select class="form-select" id="c-act" required><option value="">— Sélectionner une activité —</option></select></div>
+                  <span class="form-error-msg">Activité obligatoire</span>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Zone principale</label>
-                  <div class="select-wrap">
-                    <select class="form-select" id="c-zone">
-                      <option value="">— Optionnel —</option>
-                    </select>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <div class="select-wrap" style="flex:1"><select class="form-select" id="c-zone"><option value="">— Optionnel —</option></select></div>
+                    <button type="button" class="btn btn-ghost btn-sm btn-icon" title="Créer une zone" onclick="openModal('modal-zone')"><i class="fa-solid fa-plus"></i></button>
                   </div>
                 </div>
               </div>
             </div>
-
-            <!-- Identité -->
             <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
-                <i class="fa-solid fa-id-card"></i> Identité
-              </div>
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-id-card"></i> Identité</div>
               <div class="form-row">
                 <div class="form-group" id="fg-c-tel">
                   <label class="form-label">Téléphone (identifiant unique) <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-phone"></i>
-                    <input class="form-input" type="tel" id="c-tel" required
-                           placeholder="6XX XXX XXX" />
-                  </div>
+                  <div class="input-wrap"><i class="iico fa-solid fa-phone"></i><input class="form-input" type="tel" id="c-tel" required placeholder="6XX XXX XXX" /></div>
                   <span class="form-hint">Identifiant principal — anonymat préservé</span>
-                  <span class="form-error-msg">Numéro de téléphone obligatoire</span>
+                  <span class="form-error-msg">Téléphone obligatoire</span>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Nom commercial</label>
-                  <div class="input-wrap">
-                    <i class="iico fa-solid fa-store"></i>
-                    <input class="form-input" type="text" id="c-nom"
-                           placeholder="ex : Chez Fatima, Dépôt Moussa…" />
-                  </div>
+                  <div class="input-wrap"><i class="iico fa-solid fa-store"></i><input class="form-input" type="text" id="c-nom" placeholder="ex : Chez Fatima, Dépôt Moussa…" /></div>
                 </div>
               </div>
-              <div class="form-row1">
+              <div class="form-row1" style="margin-top:14px">
                 <div class="form-group" id="fg-c-date">
                   <label class="form-label">Date de première observation <span class="req">*</span></label>
-                  <div class="input-wrap">
-                    <i class="iico fa-regular fa-calendar"></i>
-                    <input class="form-input" type="date" id="c-date" required />
-                  </div>
+                  <div class="input-wrap"><i class="iico fa-regular fa-calendar"></i><input class="form-input" type="date" id="c-date" required /></div>
                   <span class="form-error-msg">Date obligatoire</span>
                 </div>
               </div>
             </div>
-
-            <!-- Type de présence -->
             <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
-                <i class="fa-solid fa-location-dot"></i> Type de présence
-              </div>
-
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-location-dot"></i> Type de présence</div>
               <div class="radio-deck">
-                <label class="radio-card">
-                  <input type="radio" name="type_pres" value="sedentaire" checked
-                         onchange="onTypePresChange('sedentaire')" />
-                  <div class="radio-card-inner">
-                    <div class="rci-icon"><i class="fa-solid fa-store"></i></div>
-                    <div class="rci-label">Sédentaire</div>
-                  </div>
-                </label>
-                <label class="radio-card">
-                  <input type="radio" name="type_pres" value="ambulant"
-                         onchange="onTypePresChange('ambulant')" />
-                  <div class="radio-card-inner">
-                    <div class="rci-icon"><i class="fa-solid fa-person-walking"></i></div>
-                    <div class="rci-label">Ambulant</div>
-                  </div>
-                </label>
-                <label class="radio-card">
-                  <input type="radio" name="type_pres" value="semi_sedentaire"
-                         onchange="onTypePresChange('semi_sedentaire')" />
-                  <div class="radio-card-inner">
-                    <div class="rci-icon"><i class="fa-solid fa-arrows-left-right"></i></div>
-                    <div class="rci-label">Semi-sédentaire</div>
-                  </div>
-                </label>
+                <label class="radio-card"><input type="radio" name="type_pres" value="sedentaire" checked onchange="onTypePresChange('sedentaire')"><div class="radio-card-inner"><div class="rci-icon"><i class="fa-solid fa-store"></i></div><div class="rci-label">Sédentaire</div></div></label>
+                <label class="radio-card"><input type="radio" name="type_pres" value="ambulant" onchange="onTypePresChange('ambulant')"><div class="radio-card-inner"><div class="rci-icon"><i class="fa-solid fa-person-walking"></i></div><div class="rci-label">Ambulant</div></div></label>
+                <label class="radio-card"><input type="radio" name="type_pres" value="semi_sedentaire" onchange="onTypePresChange('semi_sedentaire')"><div class="radio-card-inner"><div class="rci-icon"><i class="fa-solid fa-arrows-left-right"></i></div><div class="rci-label">Semi-sédentaire</div></div></label>
               </div>
-
-              <!-- Champs ambulant (conditionnels) -->
               <div class="cond-block" id="bloc-ambulant">
-                <div class="cond-block-label">
-                  <i class="fa-solid fa-route"></i> Informations circuit ambulant
-                </div>
+                <div class="cond-block-label"><i class="fa-solid fa-route"></i> Informations circuit ambulant</div>
                 <div class="form-row">
-                  <div class="form-group">
-                    <label class="form-label">Zones du circuit habituel</label>
-                    <div class="input-wrap">
-                      <i class="iico fa-solid fa-map-pin"></i>
-                      <input class="form-input" type="text" id="c-circuit"
-                             placeholder='["Zone A", "Bord de route", "Zone nord"]' />
-                    </div>
-                    <span class="form-hint">Format JSON list des zones parcourues</span>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Point de départ</label>
-                    <div class="input-wrap">
-                      <i class="iico fa-solid fa-house"></i>
-                      <input class="form-input" type="text" id="c-depart"
-                             placeholder="Dépôt / domicile de départ" />
-                    </div>
-                  </div>
+                  <div class="form-group"><label class="form-label">Zones du circuit habituel</label><div class="input-wrap"><i class="iico fa-solid fa-map-pin"></i><input class="form-input" type="text" id="c-circuit" placeholder='["Zone A","Bord de route"]' /></div></div>
+                  <div class="form-group"><label class="form-label">Point de départ</label><div class="input-wrap"><i class="iico fa-solid fa-house"></i><input class="form-input" type="text" id="c-depart" placeholder="Dépôt / domicile" /></div></div>
                 </div>
               </div>
             </div>
-
-            <!-- Notes -->
             <div class="form-section-body" style="padding:20px;border-bottom:1px solid var(--border)">
-              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px">
-                <i class="fa-solid fa-note-sticky"></i> Notes <span style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">&nbsp;(facultatif)</span>
-              </div>
-              <div class="form-row1">
-                <div class="form-group full">
-                  <textarea class="form-textarea" id="c-notes"
-                            placeholder="Observations de terrain, contexte particulier…"></textarea>
-                </div>
-              </div>
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:13px;display:flex;align-items:center;gap:7px"><i class="fa-solid fa-note-sticky"></i> Notes (facultatif)</div>
+              <div class="form-row1"><div class="form-group full"><textarea class="form-textarea" id="c-notes" placeholder="Observations de terrain…"></textarea></div></div>
             </div>
-
             <div class="form-actions">
-              <button type="button" class="btn btn-ghost btn-sm" onclick="resetCom()">
-                <i class="fa-solid fa-xmark"></i> Réinitialiser
-              </button>
-              <button type="submit" class="btn btn-success" id="btn-com">
-                <i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant
-              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="resetCom()"><i class="fa-solid fa-xmark"></i> Réinitialiser</button>
+              <button type="submit" class="btn btn-success" id="btn-com"><i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant</button>
             </div>
-
           </form>
         </div>
+      </div><!-- /enregistrement -->
 
-      </div><!-- /page-enregistrement -->
-
-      <!-- ══════════════════════════════════════════════════
-           PAGE : COMMERÇANTS
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ COMMERÇANTS ══ -->
       <div class="page" id="page-commercants">
         <div class="flex-between mb-20">
           <div class="flex-row">
-            <div class="select-wrap" style="min-width:190px">
-              <select class="form-select" id="f-com-act" onchange="loadComs()">
-                <option value="">Toutes activités</option>
-              </select>
-            </div>
-            <div class="select-wrap" style="min-width:170px">
-              <select class="form-select" id="f-com-type" onchange="loadComs()">
-                <option value="">Tous types</option>
-                <option value="sedentaire">Sédentaire</option>
-                <option value="ambulant">Ambulant</option>
-                <option value="semi_sedentaire">Semi-sédentaire</option>
-              </select>
-            </div>
+            <div class="select-wrap" style="min-width:190px"><select class="form-select" id="f-com-act" onchange="loadComs()"><option value="">Toutes activités</option></select></div>
+            <div class="select-wrap" style="min-width:170px"><select class="form-select" id="f-com-type" onchange="loadComs()"><option value="">Tous types</option><option value="sedentaire">Sédentaire</option><option value="ambulant">Ambulant</option><option value="semi_sedentaire">Semi-sédentaire</option></select></div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')">
-            <i class="fa-solid fa-user-plus"></i> Nouveau commerçant
-          </button>
+          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')"><i class="fa-solid fa-user-plus"></i> Nouveau commerçant</button>
         </div>
-
         <div class="card">
           <div class="card-body-flush">
             <table class="tbl">
-              <thead>
-                <tr>
-                  <th>Téléphone</th>
-                  <th>Nom commercial</th>
-                  <th>Activité principale</th>
-                  <th>Type</th>
-                  <th>Zone principale</th>
-                  <th>1ère obs.</th>
-                  <th>Statut</th>
-                  <th style="text-align:right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-com">
-                <tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
-              </tbody>
+              <thead><tr><th>Téléphone</th><th>Nom commercial</th><th>Activité</th><th>Type</th><th>Zone</th><th>1ère obs.</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+              <tbody id="tbody-com"><tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr></tbody>
             </table>
           </div>
         </div>
-      </div><!-- /page-commercants -->
+      </div>
 
-      <!-- ══════════════════════════════════════════════════
-           PAGE : ACTIVITÉS
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ ACTIVITÉS ══ -->
       <div class="page" id="page-activites">
         <div class="flex-between mb-20">
-          <div class="select-wrap" style="min-width:200px">
-            <select class="form-select" id="f-act-cat" onchange="loadActs()">
-              <option value="">Toutes catégories</option>
-            </select>
+          <div class="flex-row">
+            <!-- Recherche -->
+            <div class="search-bar" style="width:260px">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="f-act-search" placeholder="Rechercher une activité…" oninput="filterActs()" />
+            </div>
+            <div class="select-wrap" style="min-width:200px"><select class="form-select" id="f-act-cat" onchange="loadActs()"><option value="">Toutes catégories</option></select></div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')">
-            <i class="fa-solid fa-plus"></i> Nouvelle activité
-          </button>
+          <button class="btn btn-primary btn-sm" onclick="goTo('enregistrement')"><i class="fa-solid fa-plus"></i> Nouvelle activité</button>
         </div>
+
+        <!-- Top 3 activités CA -->
+        <div id="act-top-cards" class="grid-3 mb-20" style="display:none"></div>
 
         <div class="card">
           <div class="card-body-flush">
             <table class="tbl">
-              <thead>
-                <tr>
-                  <th>Nom de l'activité</th>
-                  <th>Catégorie</th>
-                  <th>Mots-clés</th>
-                  <th>1ère observation</th>
-                  <th>Statut</th>
-                  <th style="text-align:right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="tbody-act">
-                <tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>
-              </tbody>
+              <thead><tr><th>Activité</th><th>Catégorie</th><th>CA total</th><th>Sessions</th><th>Commerçants</th><th>Tendance mois</th><th>Statut</th><th style="text-align:right">Actions</th></tr></thead>
+              <tbody id="tbody-act"><tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr></tbody>
             </table>
           </div>
         </div>
-      </div><!-- /page-activites -->
+      </div>
 
-      <!-- ══════════════════════════════════════════════════
-           PAGE : ALERTES
-      ══════════════════════════════════════════════════ -->
+      <!-- ══ ALERTES ══ -->
       <div class="page" id="page-alertes">
         <div class="flex-between mb-20">
-          <div class="select-wrap" style="min-width:200px">
-            <select class="form-select" id="f-alerte-lue" onchange="loadAlertes()">
-              <option value="">Toutes les alertes</option>
-              <option value="false">Non lues uniquement</option>
-              <option value="true">Lues uniquement</option>
-            </select>
-          </div>
+          <div class="select-wrap" style="min-width:200px"><select class="form-select" id="f-alerte-lue" onchange="loadAlertes()"><option value="">Toutes les alertes</option><option value="false">Non lues uniquement</option><option value="true">Lues uniquement</option></select></div>
           <div class="flex-row">
-            <button class="btn btn-ghost btn-sm" onclick="toutLu()">
-              <i class="fa-solid fa-check-double"></i> Tout marquer lu
-            </button>
-            <button class="btn btn-secondary btn-sm" onclick="loadAlertes()">
-              <i class="fa-solid fa-rotate-right"></i> Actualiser
-            </button>
+            <button class="btn btn-ghost btn-sm" onclick="toutLu()"><i class="fa-solid fa-check-double"></i> Tout marquer lu</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadAlertes()"><i class="fa-solid fa-rotate-right"></i> Actualiser</button>
           </div>
         </div>
-
-        <div class="card">
-          <div id="alertes-list">
-            <div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>
-          </div>
-        </div>
-      </div><!-- /page-alertes -->
+        <div class="card"><div id="alertes-list"><div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div></div></div>
+      </div>
 
     </div><!-- /content -->
   </div><!-- /main -->
 </div><!-- /app -->
 
-<!-- ══════════════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════════════ -->
 <script>
-  /* ──────────────────────────────────────────────────────
-     CONFIG API
-  ────────────────────────────────────────────────────── */
   const API = 'http://localhost:8000';
-
-  /* ──────────────────────────────────────────────────────
-     ÉTAT GLOBAL — caches référentiels
-  ────────────────────────────────────────────────────── */
-  let CATS = [], ACTS = [], ZONES = [], COMS = [];
+  let CATS=[], ACTS=[], ZONES=[], COMS=[];
   let currentPage = 'dashboard';
+  let actsCache = [];
 
-  /* ──────────────────────────────────────────────────────
-     SNACKBAR
-     Affiche une notification temporaire.
-     type: 'success' | 'error' | 'warn' | 'info'
-  ────────────────────────────────────────────────────── */
-  function snack(title, msg = '', type = 'info', ms = 4500) {
-    const icons = {
-      success: 'fa-circle-check',
-      error:   'fa-circle-xmark',
-      warn:    'fa-triangle-exclamation',
-      info:    'fa-bell',
-    };
-
+  /* ── SNACKBAR ── */
+  function snack(title, msg='', type='info', ms=4500) {
+    const icons = {success:'fa-circle-check',error:'fa-circle-xmark',warn:'fa-triangle-exclamation',info:'fa-bell'};
     const el = document.createElement('div');
     el.className = `snack ${type}`;
-    el.innerHTML = `
-      <div class="snack-icon-wrap"><i class="fa-solid ${icons[type] || 'fa-bell'}"></i></div>
-      <div class="snack-body">
-        <div class="snack-title">${title}</div>
-        ${msg ? `<div class="snack-msg">${msg}</div>` : ''}
-      </div>
-      <button class="snack-close" onclick="dismissSnack(this.parentElement)" title="Fermer">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    `;
-
+    el.innerHTML = `<div class="snack-ico"><i class="fa-solid ${icons[type]||icons.info}"></i></div>
+      <div class="snack-content"><div class="snack-title">${title}</div>${msg?`<div class="snack-msg">${msg}</div>`:''}</div>
+      <button class="snack-close" onclick="dismissSnack(this.parentElement)"><i class="fa-solid fa-xmark"></i></button>`;
     document.getElementById('snack-container').appendChild(el);
     setTimeout(() => dismissSnack(el), ms);
   }
-
   function dismissSnack(el) {
-    if (!el?.parentElement) return;
-    el.classList.add('out');
-    setTimeout(() => el.remove(), 280);
+    if (!el) return; el.classList.add('out');
+    setTimeout(() => el.remove(), 220);
   }
 
-  /* ──────────────────────────────────────────────────────
-     APPEL API — wrapper fetch avec gestion d'erreurs
-  ────────────────────────────────────────────────────── */
-  async function apiFetch(method, endpoint, body = null) {
-    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  /* ── MODAL ── */
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+  /* ── DETAIL PANEL ── */
+  function openDetail() {
+    document.getElementById('detail-overlay').classList.add('open');
+    document.getElementById('detail-panel').classList.add('open');
+  }
+  function closeDetail() {
+    document.getElementById('detail-overlay').classList.remove('open');
+    document.getElementById('detail-panel').classList.remove('open');
+  }
+
+  /* ── API ── */
+  async function apiFetch(method, endpoint, body=null) {
+    const opts = { method, headers:{'Content-Type':'application/json'} };
     if (body) opts.body = JSON.stringify(body);
-
     const res = await fetch(`${API}${endpoint}`, opts);
-
     if (!res.ok) {
-      let detail = `Erreur ${res.status}`;
-      try { const d = await res.json(); detail = d.detail || JSON.stringify(d); } catch (_) {}
-      throw new Error(detail);
+      let msg = `HTTP ${res.status}`;
+      try { const d = await res.json(); msg = d.detail || JSON.stringify(d); } catch(_){}
+      throw new Error(msg);
     }
-
     if (res.status === 204) return null;
     return res.json();
   }
 
-  /* ──────────────────────────────────────────────────────
-     FORMATAGE
-  ────────────────────────────────────────────────────── */
-  function fcfa(n) {
-    if (n == null) return '—';
-    return new Intl.NumberFormat('fr-FR').format(Math.round(n));
-  }
-
-  function dateStr(s) {
-    if (!s) return '—';
-    const [y, m, d] = s.split('T')[0].split('-');
-    return `${d}/${m}/${y}`;
-  }
-
+  /* ── FORMATTERS ── */
+  function fcfa(n) { return n==null?'—':Number(n).toLocaleString('fr-FR'); }
+  function dateStr(s) { if(!s) return '—'; const d=new Date(s); return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
   function tendanceBadge(t) {
-    if (!t) return '<span class="badge b-gray">—</span>';
-    const map = {
-      hausse: ['b-red',   'fa-arrow-trend-up',   'Hausse'],
-      baisse: ['b-green', 'fa-arrow-trend-down',  'Baisse'],
-      stable: ['b-gray',  'fa-minus',             'Stable'],
-    };
-    const [cls, ico, label] = map[t] || ['b-gray', 'fa-minus', t];
-    return `<span class="badge ${cls}"><i class="fa-solid ${ico}"></i> ${label}</span>`;
+    if(t==='hausse') return `<span class="badge b-green"><i class="fa-solid fa-arrow-trend-up"></i> Hausse</span>`;
+    if(t==='baisse') return `<span class="badge b-red"><i class="fa-solid fa-arrow-trend-down"></i> Baisse</span>`;
+    return `<span class="badge b-gray"><i class="fa-solid fa-minus"></i> Stable</span>`;
   }
-
-  function statutBadge(actif) {
-    return actif
-      ? '<span class="badge b-green"><i class="fa-solid fa-circle"></i> Actif</span>'
-      : '<span class="badge b-gray"><i class="fa-regular fa-circle"></i> Inactif</span>';
-  }
-
+  function statutBadge(actif) { return actif ? `<span class="badge b-green"><i class="fa-solid fa-circle"></i> Actif</span>` : `<span class="badge b-gray"><i class="fa-solid fa-circle"></i> Inactif</span>`; }
   function presenceBadge(t) {
-    const map = {
-      sedentaire:      ['b-gold',  'fa-store',               'Sédentaire'],
-      ambulant:        ['b-amber', 'fa-person-walking',       'Ambulant'],
-      semi_sedentaire: ['b-gray',  'fa-arrows-left-right',    'Semi-séd.'],
-    };
-    const [cls, ico, label] = map[t] || ['b-gray', 'fa-circle', t];
-    return `<span class="badge ${cls}"><i class="fa-solid ${ico}"></i> ${label}</span>`;
+    const map = {sedentaire:['b-blue','fa-store','Sédentaire'],ambulant:['b-amber','fa-person-walking','Ambulant'],semi_sedentaire:['b-purple','fa-arrows-left-right','Semi-séd.']};
+    const [cls,ico,lbl] = map[t]||['b-gray','fa-question','?'];
+    return `<span class="badge ${cls}"><i class="fa-solid ${ico}"></i> ${lbl}</span>`;
+  }
+  function niveauIco(n) { return {info:'fa-info-circle',warning:'fa-triangle-exclamation',critique:'fa-circle-exclamation'}[n]||'fa-bell'; }
+  function updateIconePreview() {
+    const v = document.getElementById('mc-icone')?.value||'?';
+    document.getElementById('icone-preview').textContent = v||'?';
   }
 
-  function niveauIco(n) {
-    return { info: 'fa-circle-info', warning: 'fa-triangle-exclamation', critique: 'fa-circle-exclamation' }[n] || 'fa-bell';
-  }
-
-  /* ──────────────────────────────────────────────────────
-     NAVIGATION
-  ────────────────────────────────────────────────────── */
+  /* ── NAVIGATION ── */
   const PAGE_META = {
-    dashboard:      ['Tableau de bord',     'Vue d\'ensemble du marché Dang'],
-    saisie:         ['Saisie de session',   'Enregistrement des données terrain du jour'],
-    enregistrement: ['Enregistrement',      'Nouvelle activité et/ou nouveau commerçant'],
-    commercants:    ['Commerçants',         'Tous les commerçants recensés'],
-    categories:     ['Catégories',          'Toutes les catégories d\'activités'],
-    activites:      ['Activités',           'Toutes les activités commerciales suivies'],
-    alertes:        ['Journal des alertes', 'Événements détectés automatiquement'],
+    dashboard:     ['Tableau de bord','Vue d\'ensemble du marché'],
+    saisie:        ['Saisie session','Enregistrement des sessions journalières'],
+    referentiels:  ['Catégories & Zones','Référentiels de base'],
+    enregistrement:['Enregistrement','Nouvelles activités et commerçants'],
+    commercants:   ['Commerçants','Liste et gestion des commerçants'],
+    activites:     ['Activités','Suivi et détail des activités commerciales'],
+    alertes:       ['Alertes','Événements et notifications du marché'],
   };
-
   function goTo(page) {
-    /* Masquer toutes les pages et désactiver tous les nav-items */
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
-    /* Activer la page et le nav-item ciblés */
-    document.getElementById(`page-${page}`).classList.add('active');
-    document.getElementById(`nav-${page}`).classList.add('active');
-
-    /* Mettre à jour la topbar */
-    const [title, sub] = PAGE_META[page] || [page, ''];
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById(`page-${page}`)?.classList.add('active');
+    document.getElementById(`nav-${page}`)?.classList.add('active');
+    const [title,sub] = PAGE_META[page]||[page,''];
     document.getElementById('topbar-title').textContent = title;
-    document.getElementById('topbar-sub').textContent   = sub;
-
+    document.getElementById('topbar-sub').textContent = sub;
     currentPage = page;
-
-    /* Charger les données selon la page */
     const loaders = {
-      dashboard:      loadDashboard,
-      saisie:         loadSaisie,
-      enregistrement: loadEnregistrement,
-      commercants:    loadComs,
-      activites:      loadActs,
-      alertes:        loadAlertes,
+      dashboard:loadDashboard, saisie:loadSaisie, referentiels:loadReferentiels,
+      enregistrement:loadEnregistrement, commercants:loadComs,
+      activites:loadActs, alertes:loadAlertes,
     };
-    if (loaders[page]) loaders[page]();
+    loaders[page]?.();
   }
-
   function refreshCurrent() { goTo(currentPage); }
 
-  /* ──────────────────────────────────────────────────────
-     RÉFÉRENTIELS — chargement + population des selects
-  ────────────────────────────────────────────────────── */
+  /* ── REFS ── */
   async function loadRefs() {
     try {
-      /* Chargement parallèle des 4 référentiels */
-      const [cats, acts, zones, coms] = await Promise.all([
-        apiFetch('GET', '/categories/'),
-        apiFetch('GET', '/activites/'),
-        apiFetch('GET', '/zones/'),
-        apiFetch('GET', '/commercants/'),
+      const [cats,acts,zones,coms] = await Promise.all([
+        apiFetch('GET','/categories/'), apiFetch('GET','/activites/'),
+        apiFetch('GET','/zones/'),      apiFetch('GET','/commercants/'),
       ]);
-      CATS  = cats  || [];
-      ACTS  = acts  || [];
-      ZONES = zones || [];
-      COMS  = coms  || [];
+      CATS=cats||[]; ACTS=acts||[]; ZONES=zones||[]; COMS=coms||[];
       populateSelects();
-    } catch (e) {
-      console.warn('Référentiels:', e.message);
-    }
+    } catch(e){ console.warn('Référentiels:',e.message); }
   }
-
-  /** Remplit tous les selects de l'app */
   function populateSelects() {
-    /* Catégories */
-    ['a-cat', 'f-act-cat'].forEach(id => {
-      const s = document.getElementById(id); if (!s) return;
-      const ph = s.options[0];
-      s.innerHTML = ''; s.appendChild(ph);
-      CATS.forEach(c => { const o = new Option(c.nom, c.id); s.appendChild(o); });
+    ['a-cat','f-act-cat'].forEach(id => {
+      const s=document.getElementById(id); if(!s) return;
+      const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
+      CATS.forEach(c=>s.appendChild(new Option(c.icone?`${c.icone} ${c.nom}`:c.nom, c.id)));
     });
-
-    /* Activités */
-    ['c-act', 's-act', 'f-com-act'].forEach(id => {
-      const s = document.getElementById(id); if (!s) return;
-      const ph = s.options[0];
-      s.innerHTML = ''; s.appendChild(ph);
-      ACTS.forEach(a => { const o = new Option(a.nom, a.id); s.appendChild(o); });
+    ['c-act','s-act','f-com-act'].forEach(id => {
+      const s=document.getElementById(id); if(!s) return;
+      const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
+      ACTS.forEach(a=>s.appendChild(new Option(a.nom, a.id)));
     });
-
-    /* Zones */
-    ['s-zone', 'c-zone'].forEach(id => {
-      const s = document.getElementById(id); if (!s) return;
-      const ph = s.options[0];
-      s.innerHTML = ''; s.appendChild(ph);
-      ZONES.forEach(z => { const o = new Option(z.nom, z.id); s.appendChild(o); });
+    ['s-zone','c-zone'].forEach(id => {
+      const s=document.getElementById(id); if(!s) return;
+      const ph=s.options[0]; s.innerHTML=''; s.appendChild(ph);
+      ZONES.forEach(z=>s.appendChild(new Option(z.nom, z.id)));
     });
-
-    /* Commerçants */
-    const sc = document.getElementById('s-com'); if (sc) {
-      const ph = sc.options[0];
-      sc.innerHTML = ''; sc.appendChild(ph);
-      COMS.forEach(c => {
-        const lbl = c.telephone + (c.nom_commercial ? ' — ' + c.nom_commercial : '');
-        const o = new Option(lbl, c.id);
-        o.dataset.type = c.type_presence;
-        o.dataset.act  = c.activite?.nom || '';
-        o.dataset.actId = c.activite?.id || '';
-        sc.appendChild(o);
-      });
+    const sc=document.getElementById('s-com'); if(sc) {
+      const ph=sc.options[0]; sc.innerHTML=''; sc.appendChild(ph);
+      COMS.forEach(c=>{ const o=new Option(c.telephone+(c.nom_commercial?' — '+c.nom_commercial:''),c.id); o.dataset.type=c.type_presence; o.dataset.act=c.activite?.nom||''; o.dataset.actId=c.activite?.id||''; sc.appendChild(o); });
     }
   }
 
-  /* ──────────────────────────────────────────────────────
-     STATUT API
-  ────────────────────────────────────────────────────── */
+  /* ── HEALTH CHECK ── */
   async function checkApi() {
-    const dot   = document.getElementById('api-dot');
-    const label = document.getElementById('api-label');
+    const dot=document.getElementById('api-dot'), lbl=document.getElementById('api-label');
     try {
-      await apiFetch('GET', '/health');
-      dot.className = 'status-dot ok';
-      label.textContent = 'API connectée';
-    } catch (_) {
-      dot.className = 'status-dot err';
-      label.textContent = 'Hors ligne';
-      snack('Backend inaccessible',
-        `Démarrez : uvicorn app.main:app --reload (port 8000)`,
-        'error', 8000);
-    }
+      await apiFetch('GET','/health');
+      dot.className='status-dot ok'; lbl.textContent='API connectée';
+    } catch(_) { dot.className='status-dot err'; lbl.textContent='API hors ligne'; }
   }
 
-  /* ──────────────────────────────────────────────────────
-     DASHBOARD
-  ────────────────────────────────────────────────────── */
+  /* ── DASHBOARD ── */
   async function loadDashboard() {
     try {
-      const d = await apiFetch('GET', '/indicateurs/dashboard');
-
-      document.getElementById('kpi-com').textContent     = d.nb_commercants_actifs ?? '—';
-      document.getElementById('kpi-act').textContent     = d.nb_activites_suivies   ?? '—';
-      document.getElementById('kpi-zones').textContent   = d.nb_zones               ?? '—';
-      document.getElementById('kpi-alertes').textContent = d.nb_alertes_non_lues    ?? '—';
-      document.getElementById('dash-ca-cur').textContent  = fcfa(d.ca_semaine_courante);
+      const d = await apiFetch('GET','/indicateurs/dashboard');
+      document.getElementById('kpi-com').textContent = d.nb_commercants_actifs ?? '—';
+      document.getElementById('kpi-act').textContent = d.nb_activites_suivies ?? '—';
+      document.getElementById('kpi-zones').textContent = d.nb_zones ?? '—';
+      document.getElementById('kpi-alertes').textContent = d.nb_alertes_non_lues ?? '—';
+      document.getElementById('dash-ca-cur').textContent = fcfa(d.ca_semaine_courante);
       document.getElementById('dash-ca-prev').textContent = fcfa(d.ca_semaine_precedente);
-      document.getElementById('dash-tendance').outerHTML  = tendanceBadge(d.tendance_globale);
-
-      /* Badge alertes nav */
-      updateAlerteBadge(d.nb_alertes_non_lues || 0);
-
-      renderTopActivites(d.top_activites || []);
-      renderDashAlertes(d.alertes_recentes || []);
-    } catch (e) {
-      snack('Erreur dashboard', e.message, 'error');
-    }
+      document.getElementById('dash-tendance').outerHTML = tendanceBadge(d.tendance_globale);
+      updateAlerteBadge(d.nb_alertes_non_lues);
+      renderCaCategories(d.ca_par_categorie||[]);
+      renderTopActivites(d.top_activites||[]);
+      renderDashAlertes(d.alertes_recentes||[]);
+    } catch(e) { snack('Erreur dashboard', e.message, 'error'); }
   }
 
-  function updateAlerteBadge(n) {
-    const b = document.getElementById('nav-badge-alertes');
-    b.textContent = n;
-    b.className   = n > 0 ? 'nav-badge' : 'nav-badge zero';
-  }
-
-  function renderTopActivites(list) {
-    const tb = document.getElementById('top-tbody');
-    if (!list.length) {
-      tb.innerHTML = '<tr><td colspan="4" class="tbl-empty"><i class="fa-solid fa-chart-bar"></i>Aucun indicateur pour ce mois</td></tr>';
-      return;
-    }
-    tb.innerHTML = list.map((ind, i) => `
-      <tr>
-        <td class="strong">#${i+1}</td>
-        <td class="strong">${ind.activite?.nom || '—'}</td>
-        <td class="mono gold">${fcfa(ind.ca_total)}</td>
-        <td>${tendanceBadge(ind.tendance)}</td>
-      </tr>
-    `).join('');
-  }
-
-  function renderDashAlertes(list) {
-    const d = document.getElementById('dash-alertes-list');
-    if (!list.length) {
-      d.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte récente</div>';
-      return;
-    }
-    d.innerHTML = list.map(a => `
-      <div class="alert-row ${!a.lue ? 'unread' : ''}">
-        <div class="alert-ico-wrap ${a.niveau}">
-          <i class="fa-solid ${niveauIco(a.niveau)}"></i>
+  function renderCaCategories(list) {
+    const div = document.getElementById('dash-ca-cats');
+    if (!list.length) { div.innerHTML='<div class="text-dim" style="font-size:12px">Aucune donnée cette semaine</div>'; return; }
+    const max = Math.max(...list.map(c=>c.ca),1);
+    div.innerHTML = list.map(c=>`
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:12.5px;color:var(--text)">${c.icone?c.icone+' ':''}${c.nom}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)">${fcfa(c.ca)} FCFA</span>
         </div>
-        <div class="alert-body">
-          <div class="alert-msg">${a.message}</div>
-          <div class="alert-meta">
-            <i class="fa-regular fa-clock"></i> ${dateStr(a.created_at)}
-            &nbsp;·&nbsp; ${a.type_alerte.replace(/_/g,' ')}
-          </div>
-        </div>
+        <div class="prog-bar"><div class="prog-fill" style="width:${Math.round(c.ca/max*100)}%;background:var(--gold-dim)"></div></div>
       </div>
     `).join('');
   }
 
-  /* ──────────────────────────────────────────────────────
-     SAISIE SESSION
-  ────────────────────────────────────────────────────── */
+  function renderTopActivites(list) {
+    const tb = document.getElementById('top-tbody');
+    if (!list.length) { tb.innerHTML='<tr><td colspan="5" class="tbl-empty">Aucune donnée ce mois</td></tr>'; return; }
+    tb.innerHTML = list.map((a,i)=>`
+      <tr style="cursor:pointer" onclick="openActiviteDetail(${a.activite?.id})">
+        <td class="mono">${i+1}</td>
+        <td class="strong">${a.activite?.nom||'—'}</td>
+        <td class="mono">${fcfa(a.ca_total)}</td>
+        <td class="dim">${a.nb_commercants??'—'}</td>
+        <td>${tendanceBadge(a.tendance)}</td>
+      </tr>`).join('');
+  }
+
+  function renderDashAlertes(list) {
+    const div = document.getElementById('dash-alertes-list');
+    if (!list.length) { div.innerHTML='<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte récente</div>'; return; }
+    div.innerHTML = list.map(a=>`
+      <div class="alert-row ${!a.lue?'unread':''}">
+        <div class="alert-ico-wrap ${a.niveau}"><i class="fa-solid ${niveauIco(a.niveau)}"></i></div>
+        <div class="alert-body">
+          <div class="alert-msg">${a.message}</div>
+          <div class="alert-meta"><i class="fa-regular fa-clock"></i> ${dateStr(a.created_at)}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function updateAlerteBadge(n) {
+    const b=document.getElementById('nav-badge-alertes');
+    b.textContent=n||0; b.classList.toggle('zero',!n);
+  }
+
+  /* ── SAISIE ── */
   async function loadSaisie() {
     await loadRefs();
-    /* Pré-remplir date d'aujourd'hui */
     document.getElementById('s-date').value = today();
-    onStatutChange();
-    await refreshSessions();
+    refreshSessions();
   }
-
   function today() { return new Date().toISOString().split('T')[0]; }
-
-  /* Affiche les infos commerçant en lecture seule après sélection */
   function onComSelect() {
-    const sel = document.getElementById('s-com');
-    const opt = sel.selectedOptions[0];
-    const strip = document.getElementById('com-info-strip');
-
-    if (opt?.value) {
-      document.getElementById('ci-type').value = opt.dataset.type || '';
-      document.getElementById('ci-act').value  = opt.dataset.act  || '';
-      strip.style.display = 'block';
-      /* Pré-sélectionner l'activité principale dans le select session */
-      if (opt.dataset.actId) document.getElementById('s-act').value = opt.dataset.actId;
-    } else {
-      strip.style.display = 'none';
-    }
+    const sel=document.getElementById('s-com');
+    const opt=sel.options[sel.selectedIndex];
+    const strip=document.getElementById('com-info-strip');
+    if (opt.value) {
+      document.getElementById('ci-type').value = opt.dataset.type||'';
+      document.getElementById('ci-act').value  = opt.dataset.act||'';
+      strip.style.display='block';
+    } else { strip.style.display='none'; }
   }
-
-  /* Masque/affiche le bloc recette selon le statut */
   function onStatutChange() {
-    const statut = document.getElementById('s-statut').value;
-    const bloc   = document.getElementById('bloc-recette');
-    const inp    = document.getElementById('s-recette');
-    if (statut === 'ouvert') {
-      bloc.style.display = 'block';
-      inp.required = true;
-    } else {
-      bloc.style.display = 'none';
-      inp.value = ''; inp.required = false;
-    }
+    const v=document.getElementById('s-statut').value;
+    document.getElementById('bloc-recette').style.display = v==='ouvert'?'block':'none';
   }
-
   async function refreshSessions() {
-    const div = document.getElementById('sessions-list');
+    const div=document.getElementById('sessions-list');
     try {
-      const list = await apiFetch('GET', '/sessions/?limit=50');
-      if (!list?.length) {
-        div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-inbox"></i>Aucune session</div>';
-        return;
-      }
-      div.innerHTML = list.map(s => {
-        const statCls = s.statut === 'ouvert' ? 'b-green' : 'b-gray';
-        return `
-          <div class="session-mini">
-            <div class="session-mini-top">
-              <span class="session-mini-id">${s.commercant?.telephone || '—'}</span>
-              <span class="session-mini-recette">${s.recette_journaliere != null ? fcfa(s.recette_journaliere) + ' F' : ''}</span>
-            </div>
-            <div class="session-mini-meta">
-              <span class="badge ${statCls}">${s.statut}</span>
-              &nbsp; ${s.activite?.nom || ''} &nbsp;·&nbsp; ${dateStr(s.date_session)}
-            </div>
+      const list=await apiFetch('GET','/sessions/?limit=50');
+      if(!list?.length){ div.innerHTML='<div class="tbl-empty">Aucune session</div>'; return; }
+      div.innerHTML=list.map(s=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${s.commercant?.telephone||'—'}${s.commercant?.nom_commercial?' — '+s.commercant.nom_commercial:''}</div>
+            <div style="font-size:11.5px;color:var(--text3);margin-top:2px">${s.activite?.nom||'—'} · ${dateStr(s.date_session)}</div>
           </div>
-        `;
-      }).join('');
-    } catch (e) {
-      div.innerHTML = '<div class="tbl-empty">Erreur de chargement</div>';
-    }
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)">${s.recette_journaliere!=null?fcfa(s.recette_journaliere)+' F':'—'}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">${s.statut}</div>
+          </div>
+        </div>`).join('');
+    } catch(e){ div.innerHTML=`<div class="tbl-empty">Erreur: ${e.message}</div>`; }
   }
+  function resetSession() { document.getElementById('form-session').reset(); document.getElementById('s-date').value=today(); document.getElementById('com-info-strip').style.display='none'; document.getElementById('bloc-recette').style.display='block'; }
 
-  function resetSession() {
-    document.getElementById('form-session').reset();
-    document.getElementById('s-date').value = today();
-    document.getElementById('com-info-strip').style.display = 'none';
-    clearErrors('form-session');
-    onStatutChange();
-  }
-
-  /* Soumission formulaire session */
   document.getElementById('form-session').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors('form-session');
-
-    /* Validation */
-    let ok = true;
-    if (!val('s-com'))  { markError('fg-s-com');    ok = false; }
-    if (!val('s-act'))  { markError('fg-s-act');    ok = false; }
-    if (!val('s-date')) { markError('fg-s-date');   ok = false; }
-    const statut = val('s-statut');
-    if (statut === 'ouvert' && !val('s-recette')) { markError('fg-s-recette'); ok = false; }
-
-    if (!ok) { snack('Champs manquants', 'Remplissez tous les champs obligatoires.', 'warn'); return; }
-
-    setBtnLoading('btn-session', true);
-
-    const payload = {
-      commercant_id:   parseInt(val('s-com')),
-      activite_id:     parseInt(val('s-act')),
-      date_session:    val('s-date'),
-      statut,
-      score_fiabilite: parseFloat(val('s-fiab')),
-      notes:           val('s-notes') || null,
-    };
-
-    const z = val('s-zone');
-    if (z) payload.zone_observation_id = parseInt(z);
-    if (statut === 'ouvert' && val('s-recette'))
-      payload.recette_journaliere = parseFloat(val('s-recette'));
-
+    let ok=true;
+    if(!val('s-com'))    { markError('fg-s-com');    ok=false; }
+    if(!val('s-date'))   { markError('fg-s-date');   ok=false; }
+    const statut=val('s-statut');
+    if(statut==='ouvert'&&!val('s-recette')) { markError('fg-s-recette'); ok=false; }
+    if(!ok){ snack('Champs manquants','','warn'); return; }
+    setBtnLoading('btn-session',true);
+    const payload = { commercant_id:parseInt(val('s-com')), date_session:val('s-date'), statut };
+    const act=val('s-act'); if(act) payload.activite_id=parseInt(act);
+    const zone=val('s-zone'); if(zone) payload.zone_observation_id=parseInt(zone);
+    if(statut==='ouvert') { payload.recette_journaliere=parseFloat(val('s-recette')); payload.score_fiabilite=parseFloat(val('s-fiab')); }
+    const notes=val('s-notes'); if(notes) payload.notes=notes;
     try {
-      await apiFetch('POST', '/sessions/', payload);
-      snack('Session enregistrée', `Session du ${dateStr(payload.date_session)} créée.`, 'success');
-      resetSession();
-      await refreshSessions();
-    } catch (e) {
-      snack('Erreur enregistrement', e.message, 'error');
-    } finally {
-      setBtnLoading('btn-session', false, '<i class="fa-solid fa-floppy-disk"></i> Enregistrer la session');
-    }
+      await apiFetch('POST','/sessions/',payload);
+      snack('Session enregistrée','Recette ajoutée au CA de l\'activité.','success');
+      resetSession(); refreshSessions();
+    } catch(e){ snack('Erreur session',e.message,'error'); }
+    finally{ setBtnLoading('btn-session',false,'<i class="fa-solid fa-floppy-disk"></i> Enregistrer la session'); }
   });
 
-  /* ──────────────────────────────────────────────────────
-     ENREGISTREMENT
-  ────────────────────────────────────────────────────── */
-  async function loadEnregistrement() {
+  /* ── RÉFÉRENTIELS ── */
+  async function loadReferentiels() {
     await loadRefs();
-    document.getElementById('a-date').value = today();
-    document.getElementById('c-date').value = today();
+    renderCatsGrid(); renderZonesGrid();
   }
 
-  /* Type de présence — afficher/masquer bloc ambulant */
-  function onTypePresChange(type) {
-    const bloc = document.getElementById('bloc-ambulant');
-    if (type === 'ambulant' || type === 'semi_sedentaire') bloc.classList.add('visible');
-    else bloc.classList.remove('visible');
+  function renderCatsGrid() {
+    const div=document.getElementById('cats-grid');
+    if(!CATS.length){ div.innerHTML='<div class="tbl-empty" style="grid-column:1/-1"><i class="fa-solid fa-layer-group"></i>Aucune catégorie — créez-en une</div>'; return; }
+    div.innerHTML=CATS.map(c=>`
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;border-radius:10px;background:var(--gold-glow);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${c.icone||'📦'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:700;color:var(--text)">${c.nom}</div>
+          ${c.description?`<div style="font-size:11.5px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description}</div>`:''}
+        </div>
+        ${statutBadge(c.actif)}
+      </div>`).join('');
   }
 
-  function resetAct() {
-    document.getElementById('form-act').reset();
-    document.getElementById('a-date').value = today();
-    clearErrors('form-act');
+  function renderZonesGrid() {
+    const div=document.getElementById('zones-grid');
+    if(!ZONES.length){ div.innerHTML='<div class="tbl-empty" style="grid-column:1/-1"><i class="fa-solid fa-location-dot"></i>Aucune zone — créez-en une</div>'; return; }
+    div.innerHTML=ZONES.map(z=>`
+      <div class="zone-card">
+        <div class="zone-card-name"><i class="fa-solid fa-location-dot" style="color:var(--amber);margin-right:6px;font-size:12px"></i>${z.nom}</div>
+        ${z.description?`<div class="zone-card-desc">${z.description}</div>`:'<div style="height:6px"></div>'}
+        <div class="zone-card-foot">
+          ${statutBadge(z.actif)}
+          ${z.latitude?`<span style="font-size:10.5px;color:var(--text3);font-family:'DM Mono',monospace">${z.latitude.toFixed(4)}, ${z.longitude?.toFixed(4)}</span>`:''}
+        </div>
+      </div>`).join('');
   }
 
-  function resetCom() {
-    document.getElementById('form-com').reset();
-    document.getElementById('c-date').value = today();
-    document.getElementById('bloc-ambulant').classList.remove('visible');
-    clearErrors('form-com');
-  }
-  /* Soumission formulaire catégorie */
-  document.getElementById('form-category').addEventListener('submit', async e => {
+  /* MODAL CATÉGORIE — soumission */
+  document.getElementById('form-modal-cat').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors('form-category');
-
-    let ok = true;
-    if (!val('cat-nom'))  { markError('fg-cat-nom');  ok = false; }
-    if (!val('cat-desc')) { markError('fg-cat-desc'); ok = false; }
-
-    if (!ok) {
-      snack('Champs manquants', 'Tous les champs sont obligatoires.', 'warn');
-      return;
-    }
-
-    setBtnLoading('btn-category', true);
-
-    const payload = {
-      nom: val('cat-nom').trim(),
-      description: val('cat-desc').trim(),
-    };
-
+    if(!val('mc-nom')){ markError('fg-mc-nom'); return; }
+    setBtnLoading('btn-modal-cat',true);
+    const payload = { nom:val('mc-nom').trim(), description:val('mc-desc').trim()||null, icone:val('mc-icone').trim()||null };
     try {
-      const created = await apiFetch('POST', '/categories/', payload); // POST request here
-      snack('Catégorie créée', `« ${created.nom} » enregistrée avec succès.`, 'success');
-      resetCategory();
-      await loadRefs(); // Rafraîchir les catégories
-    } catch (e) {
-      snack('Erreur création catégorie', e.message, 'error');
-    } finally {
-      setBtnLoading('btn-category', false, '<i class="fa-solid fa-folder-plus"></i> Enregistrer la catégorie');
-    }
+      const created=await apiFetch('POST','/categories/',payload);
+      snack('Catégorie créée',`« ${created.nom} » disponible dans les selects.`,'success');
+      document.getElementById('form-modal-cat').reset();
+      document.getElementById('icone-preview').textContent='?';
+      closeModal('modal-cat');
+      await loadRefs();
+      renderCatsGrid();
+    } catch(e){ snack('Erreur catégorie',e.message,'error'); }
+    finally{ setBtnLoading('btn-modal-cat',false,'<i class="fa-solid fa-layer-group"></i> Créer la catégorie'); }
   });
-  /* Soumission formulaire activité */
+
+  /* MODAL ZONE — soumission */
+  document.getElementById('form-modal-zone').addEventListener('submit', async e => {
+    e.preventDefault();
+    if(!val('mz-nom')){ markError('fg-mz-nom'); return; }
+    setBtnLoading('btn-modal-zone',true);
+    const payload = { nom:val('mz-nom').trim(), description:val('mz-desc').trim()||null };
+    const lat=val('mz-lat'), lng=val('mz-lng');
+    if(lat) payload.latitude=parseFloat(lat);
+    if(lng) payload.longitude=parseFloat(lng);
+    try {
+      const created=await apiFetch('POST','/zones/',payload);
+      snack('Zone créée',`« ${created.nom} » ajoutée.`,'success');
+      document.getElementById('form-modal-zone').reset();
+      closeModal('modal-zone');
+      await loadRefs();
+      renderZonesGrid();
+    } catch(e){ snack('Erreur zone',e.message,'error'); }
+    finally{ setBtnLoading('btn-modal-zone',false,'<i class="fa-solid fa-location-dot"></i> Créer la zone'); }
+  });
+
+  /* ── ENREGISTREMENT ── */
+  async function loadEnregistrement() { await loadRefs(); document.getElementById('a-date').value=today(); document.getElementById('c-date').value=today(); }
+  function onTypePresChange(type) { const b=document.getElementById('bloc-ambulant'); if(type==='ambulant'||type==='semi_sedentaire') b.classList.add('visible'); else b.classList.remove('visible'); }
+  function resetAct() { document.getElementById('form-act').reset(); document.getElementById('a-date').value=today(); }
+  function resetCom() { document.getElementById('form-com').reset(); document.getElementById('c-date').value=today(); document.getElementById('bloc-ambulant').classList.remove('visible'); }
+
   document.getElementById('form-act').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors('form-act');
-
-    let ok = true;
-    if (!val('a-cat'))  { markError('fg-a-cat');  ok = false; }
-    if (!val('a-nom'))  { markError('fg-a-nom');  ok = false; }
-    if (!val('a-date')) { markError('fg-a-date'); ok = false; }
-
-    if (!ok) { snack('Champs manquants', '', 'warn'); return; }
-
-    setBtnLoading('btn-act', true);
-
-    const payload = {
-      categorie_id:              parseInt(val('a-cat')),
-      nom:                       val('a-nom').trim(),
-      mots_cles:                 val('a-mots').trim() || null,
-      date_premiere_observation: val('a-date'),
-    };
-
+    let ok=true;
+    if(!val('a-cat')) { markError('fg-a-cat'); ok=false; }
+    if(!val('a-nom')) { markError('fg-a-nom'); ok=false; }
+    if(!val('a-date')){ markError('fg-a-date');ok=false; }
+    if(!ok){ snack('Champs manquants','','warn'); return; }
+    setBtnLoading('btn-act',true);
+    const payload = { categorie_id:parseInt(val('a-cat')), nom:val('a-nom').trim(), mots_cles:val('a-mots').trim()||null, date_premiere_observation:val('a-date') };
     try {
-      const created = await apiFetch('POST', '/activites/', payload);
-      snack('Activité créée',
-        `« ${created.nom} » enregistrée. Alerte + notification mobile envoyées.`,
-        'success', 5500);
-      resetAct();
-      await loadRefs(); /* Rafraîchir les selects pour que la nouvelle activité soit dispo */
-    } catch (e) {
-      snack('Erreur création activité', e.message, 'error');
-    } finally {
-      setBtnLoading('btn-act', false, '<i class="fa-solid fa-tag"></i> Enregistrer l\'activité');
-    }
+      const c=await apiFetch('POST','/activites/',payload);
+      snack('Activité créée',`« ${c.nom} » enregistrée. Alerte + notification envoyées.`,'success',5500);
+      resetAct(); await loadRefs();
+    } catch(e){ snack('Erreur activité',e.message,'error'); }
+    finally{ setBtnLoading('btn-act',false,'<i class="fa-solid fa-tag"></i> Enregistrer l\'activité'); }
   });
 
-  /* Soumission formulaire commerçant */
   document.getElementById('form-com').addEventListener('submit', async e => {
     e.preventDefault();
-    clearErrors('form-com');
-
-    let ok = true;
-    if (!val('c-act'))  { markError('fg-c-act');  ok = false; }
-    if (!val('c-tel'))  { markError('fg-c-tel');  ok = false; }
-    if (!val('c-date')) { markError('fg-c-date'); ok = false; }
-
-    if (!ok) { snack('Champs manquants', 'L\'activité et le téléphone sont obligatoires.', 'warn'); return; }
-
-    setBtnLoading('btn-com', true);
-
-    const type = document.querySelector('input[name="type_pres"]:checked')?.value || 'sedentaire';
-
-    const payload = {
-      activite_id:       parseInt(val('c-act')),
-      telephone:         val('c-tel').trim(),
-      nom_commercial:    val('c-nom').trim() || null,
-      type_presence:     type,
-      date_premiere_obs: val('c-date'),
-      notes:             val('c-notes').trim() || null,
-    };
-
-    const z = val('c-zone');
-    if (z) payload.zone_principale_id = parseInt(z);
-
-    if (type !== 'sedentaire') {
-      const cir = val('c-circuit').trim();
-      const dep = val('c-depart').trim();
-      if (cir) payload.zones_circuit = cir;
-      if (dep) payload.point_depart  = dep;
-    }
-
+    let ok=true;
+    if(!val('c-act')) { markError('fg-c-act'); ok=false; }
+    if(!val('c-tel')) { markError('fg-c-tel'); ok=false; }
+    if(!val('c-date')){ markError('fg-c-date');ok=false; }
+    if(!ok){ snack('Champs manquants','Activité et téléphone obligatoires.','warn'); return; }
+    setBtnLoading('btn-com',true);
+    const type=document.querySelector('input[name="type_pres"]:checked')?.value||'sedentaire';
+    const payload = { activite_id:parseInt(val('c-act')), telephone:val('c-tel').trim(), nom_commercial:val('c-nom').trim()||null, type_presence:type, date_premiere_obs:val('c-date'), notes:val('c-notes').trim()||null };
+    const z=val('c-zone'); if(z) payload.zone_principale_id=parseInt(z);
+    if(type!=='sedentaire') { const cir=val('c-circuit').trim(),dep=val('c-depart').trim(); if(cir) payload.zones_circuit=cir; if(dep) payload.point_depart=dep; }
     try {
-      await apiFetch('POST', '/commercants/', payload);
-      snack('Commerçant enregistré',
-        `${payload.telephone}${payload.nom_commercial ? ' — ' + payload.nom_commercial : ''} ajouté.`,
-        'success');
-      resetCom();
-      await loadRefs();
-    } catch (e) {
-      snack('Erreur enregistrement', e.message, 'error');
-    } finally {
-      setBtnLoading('btn-com', false, '<i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant');
-    }
+      await apiFetch('POST','/commercants/',payload);
+      snack('Commerçant enregistré',`${payload.telephone}${payload.nom_commercial?' — '+payload.nom_commercial:''} ajouté.`,'success');
+      resetCom(); await loadRefs();
+    } catch(e){ snack('Erreur commerçant',e.message,'error'); }
+    finally{ setBtnLoading('btn-com',false,'<i class="fa-solid fa-user-plus"></i> Enregistrer le commerçant'); }
   });
 
-  /* ──────────────────────────────────────────────────────
-     COMMERÇANTS — liste
-  ────────────────────────────────────────────────────── */
+  /* ── COMMERÇANTS ── */
   async function loadComs() {
-    const tb = document.getElementById('tbody-com');
-    tb.innerHTML = '<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
-
-    let url = '/commercants/?';
-    const a = val('f-com-act'), t = val('f-com-type');
-    if (a) url += `activite_id=${a}&`;
-    if (t) url += `type_presence=${t}&`;
-
+    const tb=document.getElementById('tbody-com');
+    tb.innerHTML='<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
+    let url='/commercants/?'; const a=val('f-com-act'),t=val('f-com-type');
+    if(a) url+=`&activite_id=${a}`; if(t) url+=`&type_presence=${t}`;
     try {
-      const list = await apiFetch('GET', url);
-      if (!list?.length) {
-        tb.innerHTML = '<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-users"></i>Aucun commerçant</td></tr>';
-        return;
-      }
-      tb.innerHTML = list.map(c => `
+      const list=await apiFetch('GET',url);
+      if(!list?.length){ tb.innerHTML='<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-users"></i>Aucun commerçant</td></tr>'; return; }
+      tb.innerHTML=list.map(c=>`
         <tr>
-          <td class="mono strong">${c.telephone}</td>
-          <td class="${c.nom_commercial ? 'strong' : 'dim'}">${c.nom_commercial || '—'}</td>
-          <td>${c.activite?.nom || '<span class="dim">—</span>'}</td>
+          <td class="strong">${c.telephone}</td>
+          <td class="dim">${c.nom_commercial||'—'}</td>
+          <td>${c.activite?.nom||'—'}</td>
           <td>${presenceBadge(c.type_presence)}</td>
-          <td class="dim">${c.zone_principale?.nom || '—'}</td>
+          <td class="dim">${c.zone_principale?.nom||'—'}</td>
           <td class="dim">${dateStr(c.date_premiere_obs)}</td>
           <td>${statutBadge(c.actif)}</td>
           <td class="td-actions">
             <button class="btn btn-ghost btn-sm" onclick="toggleCom(${c.id},${!c.actif})">
-              <i class="fa-solid ${c.actif ? 'fa-ban' : 'fa-circle-check'}"></i>
-              ${c.actif ? 'Désactiver' : 'Réactiver'}
+              <i class="fa-solid ${c.actif?'fa-ban':'fa-circle-check'}"></i> ${c.actif?'Désactiver':'Réactiver'}
             </button>
           </td>
-        </tr>
-      `).join('');
-    } catch (e) {
-      tb.innerHTML = `<tr><td colspan="8" class="tbl-empty">Erreur : ${e.message}</td></tr>`;
-      snack('Erreur chargement commerçants', e.message, 'error');
-    }
+        </tr>`).join('');
+    } catch(e){ tb.innerHTML=`<tr><td colspan="8" class="tbl-empty">Erreur: ${e.message}</td></tr>`; }
+  }
+  async function toggleCom(id,actif) {
+    try { await apiFetch('PATCH',`/commercants/${id}/activer?actif=${actif}`); snack(actif?'Commerçant réactivé':'Commerçant désactivé','',actif?'success':'warn'); loadComs(); loadRefs(); }
+    catch(e){ snack('Erreur',e.message,'error'); }
   }
 
-  async function toggleCom(id, actif) {
-    try {
-      await apiFetch('PATCH', `/commercants/${id}/activer?actif=${actif}`);
-      snack(actif ? 'Commerçant réactivé' : 'Commerçant désactivé', '', actif ? 'success' : 'warn');
-      await loadComs();
-      await loadRefs();
-    } catch (e) { snack('Erreur', e.message, 'error'); }
-  }
-
-  /* ──────────────────────────────────────────────────────
-     ACTIVITÉS — liste
-  ────────────────────────────────────────────────────── */
+  /* ── ACTIVITÉS ── */
   async function loadActs() {
-    const tb = document.getElementById('tbody-act');
-    tb.innerHTML = '<tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
-
-    let url = '/activites/?actif_seulement=false';
-    const cat = val('f-act-cat');
-    if (cat) url += `&categorie_id=${cat}`;
-
+    const tb=document.getElementById('tbody-act');
+    tb.innerHTML='<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</td></tr>';
+    let url='/activites/?actif_seulement=false'; const cat=val('f-act-cat'); if(cat) url+=`&categorie_id=${cat}`;
     try {
-      const list = await apiFetch('GET', url);
-      if (!list?.length) {
-        tb.innerHTML = '<tr><td colspan="6" class="tbl-empty"><i class="fa-solid fa-tag"></i>Aucune activité</td></tr>';
-        return;
-      }
-      tb.innerHTML = list.map(a => `
-        <tr>
-          <td class="strong">${a.nom}</td>
-          <td class="dim">${a.categorie?.nom || '—'}</td>
-          <td><span style="font-size:11.5px;color:var(--text3);font-style:italic">${a.mots_cles || '—'}</span></td>
-          <td class="dim">${dateStr(a.date_premiere_observation)}</td>
-          <td>${statutBadge(a.actif)}</td>
-          <td class="td-actions">
-            <button class="btn btn-ghost btn-sm" onclick="toggleAct(${a.id},${!a.actif})">
-              <i class="fa-solid ${a.actif ? 'fa-ban' : 'fa-circle-check'}"></i>
-              ${a.actif ? 'Désactiver' : 'Réactiver'}
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    } catch (e) {
-      tb.innerHTML = `<tr><td colspan="6" class="tbl-empty">Erreur : ${e.message}</td></tr>`;
-      snack('Erreur chargement activités', e.message, 'error');
+      const list=await apiFetch('GET',url);
+      actsCache=list||[];
+      renderActsTable(actsCache);
+      renderActTopCards(actsCache);
+    } catch(e){ tb.innerHTML=`<tr><td colspan="8" class="tbl-empty">Erreur: ${e.message}</td></tr>`; }
+  }
+
+  function filterActs() {
+    const q=document.getElementById('f-act-search').value.toLowerCase().trim();
+    const filtered=q?actsCache.filter(a=>a.nom.toLowerCase().includes(q)||(a.mots_cles||'').toLowerCase().includes(q)):actsCache;
+    renderActsTable(filtered);
+  }
+
+  function renderActsTable(list) {
+    const tb=document.getElementById('tbody-act');
+    if(!list?.length){ tb.innerHTML='<tr><td colspan="8" class="tbl-empty"><i class="fa-solid fa-tag"></i>Aucune activité</td></tr>'; return; }
+    tb.innerHTML=list.map(a=>`
+      <tr>
+        <td><span class="strong" style="cursor:pointer;text-decoration:underline;text-decoration-color:var(--border2)" onclick="openActiviteDetail(${a.id})">${a.nom}</span></td>
+        <td><span class="badge b-gray">${a.categorie?.icone?a.categorie.icone+' ':''}${a.categorie?.nom||'—'}</span></td>
+        <td class="mono">${fcfa(a.ca_total)}</td>
+        <td class="dim">—</td>
+        <td class="dim">—</td>
+        <td>—</td>
+        <td>${statutBadge(a.actif)}</td>
+        <td class="td-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openActiviteDetail(${a.id})"><i class="fa-solid fa-chart-bar"></i> Détail</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAct(${a.id},${!a.actif})"><i class="fa-solid ${a.actif?'fa-ban':'fa-circle-check'}"></i> ${a.actif?'Désact.':'Réact.'}</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function renderActTopCards(list) {
+    const sorted=[...list].filter(a=>a.ca_total>0).sort((a,b)=>b.ca_total-a.ca_total).slice(0,3);
+    const cont=document.getElementById('act-top-cards');
+    if(!sorted.length){ cont.style.display='none'; return; }
+    cont.style.display='grid';
+    const colors=['gold','green','amber'];
+    cont.innerHTML=sorted.map((a,i)=>`
+      <div class="stat-card ${colors[i]}" style="cursor:pointer" onclick="openActiviteDetail(${a.id})">
+        <div class="stat-icon"><i class="fa-solid fa-ranking-star"></i></div>
+        <div>
+          <div class="stat-label">#${i+1} — ${a.categorie?.nom||'—'}</div>
+          <div class="stat-value" style="font-size:20px">${fcfa(a.ca_total)}</div>
+          <div class="stat-sub">${a.nom}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  async function openActiviteDetail(id) {
+    if(!id) return;
+    document.getElementById('dp-nom').textContent='Chargement…';
+    document.getElementById('dp-cat').textContent='';
+    document.getElementById('dp-body').innerHTML='<div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i> Chargement…</div>';
+    openDetail();
+    try {
+      const d=await apiFetch('GET',`/activites/${id}/detail`);
+      document.getElementById('dp-nom').textContent=d.nom;
+      document.getElementById('dp-cat').innerHTML=`${d.categorie?.icone?d.categorie.icone+' ':''}${d.categorie?.nom||'—'} &nbsp;·&nbsp; ${statutBadge(d.actif)}`;
+      document.getElementById('dp-body').innerHTML=renderDetailBody(d);
+    } catch(e){
+      document.getElementById('dp-body').innerHTML=`<div class="tbl-empty">Erreur: ${e.message}</div>`;
     }
   }
 
-  async function toggleAct(id, actif) {
-    try {
-      await apiFetch('PATCH', `/activites/${id}/activer?actif=${actif}`);
-      snack(actif ? 'Activité réactivée' : 'Activité désactivée', '', actif ? 'success' : 'warn');
-      await loadActs(); await loadRefs();
-    } catch (e) { snack('Erreur', e.message, 'error'); }
+  function renderDetailBody(d) {
+    return `
+      <!-- KPIs -->
+      <div class="detail-kpis">
+        <div class="dkpi"><div class="dkpi-label">CA total</div><div class="dkpi-val">${fcfa(d.ca_total)}</div><div class="dkpi-sub">FCFA · cumulé</div></div>
+        <div class="dkpi"><div class="dkpi-label">CA semaine</div><div class="dkpi-val">${fcfa(d.ca_semaine)}</div><div class="dkpi-sub">FCFA · en cours</div></div>
+        <div class="dkpi"><div class="dkpi-label">CA mois</div><div class="dkpi-val">${fcfa(d.ca_mois)}</div><div class="dkpi-sub">FCFA · en cours</div></div>
+      </div>
+      <div class="detail-kpis">
+        <div class="dkpi"><div class="dkpi-label">Sessions total</div><div class="dkpi-val">${d.nb_sessions_total}</div><div class="dkpi-sub">toutes dates</div></div>
+        <div class="dkpi"><div class="dkpi-label">Sessions 30j</div><div class="dkpi-val">${d.nb_sessions_30j}</div><div class="dkpi-sub">derniers 30 jours</div></div>
+        <div class="dkpi"><div class="dkpi-label">Commerçants</div><div class="dkpi-val">${d.nb_commercants}</div><div class="dkpi-sub">actifs sur activité</div></div>
+      </div>
+
+      <!-- Commerçants -->
+      <div class="detail-section">
+        <div class="detail-section-title"><i class="fa-solid fa-users"></i> Commerçants actifs (${d.nb_commercants})</div>
+        ${d.commercants?.length ? d.commercants.map(c=>`
+          <div class="com-row">
+            <div class="com-avatar"><i class="fa-solid fa-user"></i></div>
+            <div class="com-info">
+              <div class="com-name">${c.nom_commercial||c.telephone}</div>
+              <div class="com-meta">${presenceBadge(c.type_presence)} ${c.zone_principale?'· '+c.zone_principale.nom:''} · dernière sess. ${dateStr(c.derniere_session)}</div>
+            </div>
+            <div class="com-stats">
+              <div class="com-ca">${fcfa(c.ca_total)} F</div>
+              <div class="com-ses">${c.nb_sessions} session${c.nb_sessions>1?'s':''}</div>
+            </div>
+          </div>`).join('') : '<div class="tbl-empty" style="padding:12px">Aucun commerçant</div>'}
+      </div>
+
+      <!-- Sessions récentes -->
+      <div class="detail-section">
+        <div class="detail-section-title"><i class="fa-solid fa-clock-rotate-left"></i> 10 dernières sessions</div>
+        <div style="border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+          ${d.sessions_recentes?.length ? d.sessions_recentes.map(s=>`
+            <div class="sess-row">
+              <div class="sess-date">${dateStr(s.date_session)}</div>
+              <div class="sess-who">${s.commercant_nom||'—'} ${s.zone_nom?'· '+s.zone_nom:''}</div>
+              <div>${s.statut==='ouvert'?`<span class="badge b-green" style="font-size:10px">${fcfa(s.recette_journaliere)} F</span>`:`<span class="badge b-gray" style="font-size:10px">${s.statut}</span>`}</div>
+            </div>`).join('') : '<div class="tbl-empty" style="padding:12px">Aucune session</div>'}
+        </div>
+      </div>
+
+      ${d.mots_cles?`<div class="detail-section"><div class="detail-section-title"><i class="fa-solid fa-tags"></i> Mots-clés</div><div style="font-size:12.5px;color:var(--text3);background:var(--surface);padding:8px 12px;border-radius:var(--r)">${d.mots_cles}</div></div>`:''}
+    `;
   }
 
-  /* ──────────────────────────────────────────────────────
-     ALERTES — liste et actions
-  ────────────────────────────────────────────────────── */
+  async function toggleAct(id,actif) {
+    try { await apiFetch('PATCH',`/activites/${id}/activer?actif=${actif}`); snack(actif?'Activité réactivée':'Activité désactivée','',actif?'success':'warn'); loadActs(); loadRefs(); }
+    catch(e){ snack('Erreur',e.message,'error'); }
+  }
+
+  /* ── ALERTES ── */
   async function loadAlertes() {
-    const div = document.getElementById('alertes-list');
-    div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>';
-
-    let url = '/alertes/?limit=100';
-    const lue = val('f-alerte-lue');
-    if (lue === 'false') url += '&lues=false';
-    if (lue === 'true')  url += '&lues=true';
-
+    const div=document.getElementById('alertes-list');
+    div.innerHTML='<div class="tbl-empty"><i class="fa-solid fa-hourglass-half"></i>Chargement…</div>';
+    let url='/alertes/?limit=100'; const lue=val('f-alerte-lue');
+    if(lue==='false') url+='&lues=false'; if(lue==='true') url+='&lues=true';
     try {
-      const list = await apiFetch('GET', url);
-      const nonLues = list?.filter(a => !a.lue).length || 0;
+      const list=await apiFetch('GET',url);
+      const nonLues=list?.filter(a=>!a.lue).length||0;
       updateAlerteBadge(nonLues);
-
-      if (!list?.length) {
-        div.innerHTML = '<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte</div>';
-        return;
-      }
-
-      div.innerHTML = list.map(a => `
-        <div class="alert-row ${!a.lue ? 'unread' : ''}" id="al-${a.id}">
-          <div class="alert-ico-wrap ${a.niveau}">
-            <i class="fa-solid ${niveauIco(a.niveau)}"></i>
-          </div>
+      if(!list?.length){ div.innerHTML='<div class="tbl-empty"><i class="fa-solid fa-check-circle"></i>Aucune alerte</div>'; return; }
+      div.innerHTML=list.map(a=>`
+        <div class="alert-row ${!a.lue?'unread':''}" id="al-${a.id}">
+          <div class="alert-ico-wrap ${a.niveau}"><i class="fa-solid ${niveauIco(a.niveau)}"></i></div>
           <div class="alert-body">
             <div class="alert-msg">${a.message}</div>
             <div class="alert-meta">
               <i class="fa-regular fa-clock"></i> ${dateStr(a.created_at)}
-              &nbsp;·&nbsp;
-              <span class="badge b-gray">${a.type_alerte.replace(/_/g,' ')}</span>
-              ${a.activite  ? `&nbsp;<i class="fa-solid fa-tag"></i> ${a.activite.nom}` : ''}
-              ${a.commercant ? `&nbsp;<i class="fa-solid fa-user"></i> ${a.commercant.telephone}` : ''}
+              &nbsp;·&nbsp; <span class="badge b-gray">${a.type_alerte.replace(/_/g,' ')}</span>
+              ${a.activite?`&nbsp;<i class="fa-solid fa-tag"></i> ${a.activite.nom}`:''}
+              ${a.commercant?`&nbsp;<i class="fa-solid fa-user"></i> ${a.commercant.telephone}`:''}
             </div>
           </div>
-          ${!a.lue
-            ? `<button class="btn btn-ghost btn-sm" onclick="marquerLue(${a.id})">
-                 <i class="fa-solid fa-check"></i> Lu
-               </button>`
-            : `<span style="font-size:11.5px;color:var(--text3);padding:0 8px;white-space:nowrap">
-                 <i class="fa-solid fa-check-double"></i> Lu
-               </span>`
-          }
-        </div>
-      `).join('');
-    } catch (e) {
-      div.innerHTML = `<div class="tbl-empty">Erreur : ${e.message}</div>`;
-      snack('Erreur alertes', e.message, 'error');
-    }
+          ${!a.lue?`<button class="btn btn-ghost btn-sm" onclick="marquerLue(${a.id})"><i class="fa-solid fa-check"></i> Lu</button>`:`<span style="font-size:11.5px;color:var(--text3);padding:0 8px"><i class="fa-solid fa-check-double"></i> Lu</span>`}
+        </div>`).join('');
+    } catch(e){ div.innerHTML=`<div class="tbl-empty">Erreur: ${e.message}</div>`; }
   }
-
   async function marquerLue(id) {
-    try {
-      await apiFetch('PATCH', `/alertes/${id}/lue`, { lue: true });
-      snack('Alerte marquée lue', '', 'info', 2000);
-      loadAlertes();
-    } catch (e) { snack('Erreur', e.message, 'error'); }
+    try { await apiFetch('PATCH',`/alertes/${id}/lue`,{lue:true}); snack('Alerte lue','','info',2000); loadAlertes(); }
+    catch(e){ snack('Erreur',e.message,'error'); }
   }
-
   async function toutLu() {
-    try {
-      const r = await apiFetch('PATCH', '/alertes/tout-lire');
-      snack('Toutes les alertes lues', `${r?.alertes_marquees || 0} alerte(s) marquée(s).`, 'success');
-      loadAlertes();
-      updateAlerteBadge(0);
-    } catch (e) { snack('Erreur', e.message, 'error'); }
+    try { const r=await apiFetch('PATCH','/alertes/tout-lire'); snack('Toutes lues',`${r?.alertes_marquees||0} alerte(s) marquée(s).`,'success'); loadAlertes(); updateAlerteBadge(0); }
+    catch(e){ snack('Erreur',e.message,'error'); }
   }
-
-  /* ──────────────────────────────────────────────────────
-     POLLING — badge alertes toutes les 60s
-  ────────────────────────────────────────────────────── */
   async function pollAlertes() {
-    try {
-      const d = await apiFetch('GET', '/indicateurs/dashboard');
-      updateAlerteBadge(d?.nb_alertes_non_lues || 0);
-    } catch (_) { /* silencieux */ }
+    try { const r=await apiFetch('GET','/alertes/?lues=false&limit=1'); updateAlerteBadge(r?.length||0); } catch(_){}
+    setTimeout(pollAlertes,60000);
   }
 
-  /* ──────────────────────────────────────────────────────
-     UTILITAIRES FORMULAIRES
-  ────────────────────────────────────────────────────── */
-
-  /** Valeur d'un champ par son ID */
-  function val(id) {
-    return document.getElementById(id)?.value || '';
+  /* ── UTILS ── */
+  function val(id) { const el=document.getElementById(id); return el?.value?.trim()||''; }
+  function markError(fgId) { document.getElementById(fgId)?.classList.add('error'); }
+  function clearErrors(formId) { document.getElementById(formId)?.querySelectorAll('.form-group.error').forEach(g=>g.classList.remove('error')); }
+  function setBtnLoading(id,loading,orig='') {
+    const b=document.getElementById(id); if(!b) return;
+    if(loading){ b.disabled=true; b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> …'; }
+    else{ b.disabled=false; if(orig) b.innerHTML=orig; }
   }
 
-  /** Marque un form-group en erreur */
-  function markError(fgId) {
-    document.getElementById(fgId)?.classList.add('has-error');
-  }
-
-  /** Efface tous les états d'erreur d'un formulaire */
-  function clearErrors(formId) {
-    document.querySelectorAll(`#${formId} .form-group.has-error`)
-      .forEach(fg => fg.classList.remove('has-error'));
-  }
-
-  /** Met un bouton en état chargement / normal */
-  function setBtnLoading(id, loading, originalHTML = '') {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.disabled = loading;
-    if (loading) {
-      btn.dataset.orig = btn.innerHTML;
-      btn.innerHTML = '<span class="btn-spinner"></span> Envoi…';
-    } else {
-      btn.innerHTML = originalHTML || btn.dataset.orig || '';
-    }
-  }
-
-  /* ──────────────────────────────────────────────────────
-     INITIALISATION
-  ────────────────────────────────────────────────────── */
+  /* ── INIT ── */
   async function init() {
-    await checkApi();
     await loadRefs();
-    await loadDashboard();
-
-    /* Pré-remplir dates */
-    const t = today();
-    ['s-date','a-date','c-date'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.value = t;
-    });
-
-    onStatutChange();
-
-    /* Masquer le loader */
-    const loader = document.getElementById('page-loader');
-    loader.classList.add('hidden');
-    setTimeout(() => loader.remove(), 400);
-
-    /* Polling alertes */
-    setInterval(pollAlertes, 60_000);
+    checkApi(); setInterval(checkApi,30000);
+    loadDashboard();
+    pollAlertes();
   }
-
-  document.addEventListener('DOMContentLoaded', init);
+  init();
 </script>
-
 </body>
 </html>

@@ -296,3 +296,96 @@ class DashboardOut(OrmBase):
     nb_alertes_non_lues:    int
     top_activites:          list[IndicateurOut]
     alertes_recentes:       list[AlerteOut]
+    
+class CommercantActiviteOut(OrmBase):
+    """
+    Commerçant ayant exercé une activité, avec ses statistiques personnelles.
+    Retourné dans ActiviteDetailOut.commercants.
+    """
+    id:               int
+    telephone:        str
+    nom_commercial:   Optional[str]
+    type_presence:    TypePresenceEnum
+    zone_principale:  Optional[ZoneSummary]
+    nb_sessions:      int     # Nombre de sessions ouvertes sur cette activité
+    ca_total:         float   # CA cumulé de ce commerçant sur cette activité
+    derniere_session: Optional[date]   # Date de sa dernière session ouverte
+
+
+class SessionRecente(OrmBase):
+    """Aperçu d'une session pour l'historique dans ActiviteDetailOut."""
+    id:                  int
+    date_session:        date
+    statut:              StatutSessionEnum
+    recette_journaliere: Optional[float]
+    commercant_nom:      Optional[str]   # nom_commercial ou téléphone
+    zone_nom:            Optional[str]
+
+
+class ActiviteDetailOut(OrmBase):
+    """
+    Fiche complète d'une activité — retournée par GET /activites/{id}/detail
+
+    Exemple de réponse :
+    {
+      "id": 3,
+      "nom": "Vente de maïs en gros",
+      "categorie": {"id": 1, "nom": "Alimentation", "icone": "🌾"},
+      "ca_total": 347000.0,         ← cumulé depuis le début
+      "ca_semaine": 82000.0,        ← semaine ISO en cours
+      "ca_mois": 195000.0,          ← mois calendaire en cours
+      "nb_sessions_total": 47,
+      "nb_sessions_30j": 18,
+      "nb_commercants": 3,
+      "commercants": [
+        {
+          "id": 1,
+          "telephone": "677001001",
+          "nom_commercial": "Mama Bawa",
+          "type_presence": "sedentaire",
+          "nb_sessions": 22,
+          "ca_total": 198000.0,
+          "derniere_session": "2025-07-16"
+        },
+        {
+          "id": 4,
+          "telephone": "677001004",
+          "nom_commercial": "Salihou",
+          "type_presence": "semi_sedentaire",
+          "nb_sessions": 18,
+          "ca_total": 112000.0,
+          "derniere_session": "2025-07-15"
+        },
+        ...
+      ],
+      "sessions_recentes": [
+        {"id": 87, "date_session": "2025-07-16", "statut": "ouvert",
+         "recette_journaliere": 18000.0, "commercant_nom": "Mama Bawa", "zone_nom": "Secteur A"},
+        ...
+      ]
+    }
+    """
+    # Infos de base
+    id:                        int
+    nom:                       str
+    categorie:                 CategorieSummary
+    mots_cles:                 Optional[str]
+    date_premiere_observation: date
+    actif:                     bool
+    created_at:                datetime
+
+    # Chiffres d'affaires
+    ca_total:           float   # Cumulé toutes dates
+    ca_semaine:         float   # Semaine ISO en cours
+    ca_mois:            float   # Mois calendaire en cours
+
+    # Sessions
+    nb_sessions_total:  int     # Total sessions ouvertes (toutes dates)
+    nb_sessions_30j:    int     # Sessions ouvertes sur les 30 derniers jours
+
+    # Commerçants
+    nb_commercants:     int                        # Nombre de commerçants distincts
+    commercants:        list[CommercantActiviteOut]  # Triés par CA décroissant
+
+    # Historique récent
+    sessions_recentes:  list[SessionRecente]       # 10 dernières sessions ouvertes, triées par date_session décroissante
